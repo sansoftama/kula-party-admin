@@ -8,7 +8,7 @@ Package manager: npm.
 
 ## Run
 
-Start the Ktor service from [kula-party-backend](https://github.com/sansoftama/kula-party-backend) on `http://localhost:8080` with `ADMIN_API_TOKEN=dev-admin-token`. This UI calls `GET /v1/admin/health`, `GET /v1/admin/users`, `GET /v1/admin/reports`, `GET /v1/admin/payments`, `GET /v1/admin/leaderboards`, `GET /v1/admin/rooms`, and `GET /v1/admin/support/tickets` with `Authorization: Bearer dev-admin-token`.
+Start the Ktor service from [kula-party-backend](https://github.com/sansoftama/kula-party-backend) on `http://localhost:8080` with `ADMIN_API_TOKEN=dev-admin-token`. This UI calls `GET /v1/admin/health`, `GET /v1/admin/users`, `GET /v1/admin/reports`, `GET /v1/admin/payments`, `GET /v1/admin/leaderboards`, `GET /v1/admin/rooms`, and `GET /v1/admin/support/tickets` with `Authorization: Bearer dev-admin-token`. The Rooms detail panel also calls `PATCH /v1/admin/rooms/{id}/flags` with the same bearer token.
 
 ```bash
 cp .env.example .env.local
@@ -48,7 +48,7 @@ There is no login screen in this version. The header shows a placeholder, “Sig
 | `/moderation` | `GET /v1/admin/reports?limit=&cursor=&status=` |
 | `/payments` | `GET /v1/admin/payments?limit=&cursor=&status=` |
 | `/leaderboards` | `GET /v1/admin/leaderboards?limit=&cursor=&board=` |
-| `/rooms` | `GET /v1/admin/rooms?limit=&cursor=&status=` |
+| `/rooms` | `GET /v1/admin/rooms?limit=&cursor=&status=` and `PATCH /v1/admin/rooms/{id}/flags` |
 | `/support` | `GET /v1/admin/support/tickets?limit=&cursor=&status=` |
 
 Users is read-only. The search box filters the page already loaded. It does not send a search query, and there are no ban or suspend actions.
@@ -59,7 +59,7 @@ Payments calls `GET /v1/admin/payments`. It is read-only. Status chips send `sta
 
 Leaderboards calls `GET /v1/admin/leaderboards`. It is read-only. Board chips send `board` as `daily`, `weekly`, or `all_time` (omit the param for all boards). The default `limit` is 20. The search box filters the page already loaded by id, username, and user id. It does not send a search query, and there are no reset, edit, or wipe actions.
 
-Rooms / Flags calls `GET /v1/admin/rooms`. It is read-only. Status chips send `status` as `live`, `idle`, or `closed` (omit the param for all statuses). The default `limit` is 20. The search box filters the page already loaded by id, name, host username, host id, and flag names. It does not send a search query, and there are no flag edits, kick, close, or ban actions.
+Rooms / Flags calls `GET /v1/admin/rooms`. Status chips send `status` as `live`, `idle`, or `closed` (omit the param for all statuses). The default `limit` is 20. The search box filters the page already loaded by id, name, host username, host id, and flag names. It does not send a search query. The detail panel toggles the known flags `featured`, `nsfw_lock`, `recording`, and `vip_only` with `PATCH /v1/admin/rooms/{id}/flags`. There are no kick, close, ban, or create-room actions. Name, status, and participant count stay read-only.
 
 Support calls `GET /v1/admin/support/tickets`. It is read-only. Status chips send `status` as `open`, `pending`, `resolved`, or `closed` (omit the param for all statuses). The default `limit` is 20. The search box filters the page already loaded by id, subject, username, user id, and body preview. It does not send a search query, and there are no reply, resolve, close, or assign actions.
 
@@ -151,6 +151,25 @@ Implemented by kula-party-backend. The typed client is `src/lib/admin-api.ts`. S
   nextCursor?: string | null;
 }
 
+// PATCH /v1/admin/rooms/{id}/flags
+// Authorization: Bearer <ADMIN_API_TOKEN>
+// {id} is the room id
+{
+  flag: string; // "featured" | "nsfw_lock" | "recording" | "vip_only"
+  enabled: boolean; // true adds or keeps the flag, false removes it
+}
+// 200: the updated room, same shape as a list item
+{
+  id: string;
+  name: string;
+  hostId: string;
+  hostUsername?: string;
+  status: "live" | "idle" | "closed";
+  participantCount: number;
+  flags: string[];
+  createdAt: string;
+}
+
 // GET /v1/admin/support/tickets?limit=20&cursor=...&status=open
 {
   items: Array<{
@@ -168,11 +187,11 @@ Implemented by kula-party-backend. The typed client is `src/lib/admin-api.ts`. S
 }
 ```
 
-With `USE_MOCK_ADMIN_API=true`, responses match those shapes. Mock user, report, payment, leaderboard, room, and support ticket cursors are numeric offsets (`0`, `8`, …) so `?limit=3` pages through the fixture list. Report, payment, room, and support ticket fixtures are filtered by `status` before that offset is applied. Leaderboard fixtures are filtered by `board` before that offset is applied.
+With `USE_MOCK_ADMIN_API=true`, responses match those shapes. Mock user, report, payment, leaderboard, room, and support ticket cursors are numeric offsets (`0`, `8`, …) so `?limit=3` pages through the fixture list. Report, payment, room, and support ticket fixtures are filtered by `status` before that offset is applied. Leaderboard fixtures are filtered by `board` before that offset is applied. Mock `PATCH /v1/admin/rooms/{id}/flags` updates the fixture room in memory and returns that room. It does not call Ktor.
 
 ## Out of scope
 
 - Consumer Android code
 - A second API (no Node/Express/Fastify server in this repo)
 - Retool or other hosted admin builders
-- Login, roles, bans, refund or capture actions, report actions, leaderboard score edits, room flag edits, room controls, or support ticket actions
+- Login, roles, bans, refund or capture actions, report actions, leaderboard score edits, room kick, close, ban, or create actions, or support ticket actions

@@ -8,6 +8,7 @@
  * GET /v1/admin/payments?limit=&cursor=&status=
  * GET /v1/admin/leaderboards?limit=&cursor=&board=
  * GET /v1/admin/rooms?limit=&cursor=&status=
+ * PATCH /v1/admin/rooms/{id}/flags
  * GET /v1/admin/support/tickets?limit=&cursor=&status=
  */
 
@@ -95,6 +96,10 @@ export type AdminLeaderboardsPage = {
 };
 
 export type RoomStatus = "live" | "idle" | "closed";
+
+export const ROOM_FLAGS = ["featured", "nsfw_lock", "recording", "vip_only"] as const;
+
+export type RoomFlag = (typeof ROOM_FLAGS)[number];
 
 export type AdminRoom = {
   id: string;

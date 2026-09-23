@@ -1,9 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
-import type { AdminRoom, RoomStatus } from "@/lib/admin-types";
+import { updateRoomFlag } from "@/app/rooms/actions";
+import { ApiError } from "@/components/api-error";
+import { ROOM_FLAGS, type AdminRoom, type RoomFlag, type RoomStatus } from "@/lib/admin-types";
 import { formatTimestamp } from "@/lib/format";
+
+const FLAG_LABELS: Record<RoomFlag, string> = {
+  featured: "Featured",
+  nsfw_lock: "NSFW lock",
+  recording: "Recording",
+  vip_only: "VIP only",
+};
+
+const KNOWN_FLAGS = new Set<string>(ROOM_FLAGS);
 
 const STATUS_CLASS: Record<RoomStatus, string> = {
   live: "bg-emerald-50 text-emerald-800 ring-emerald-600/20",
@@ -16,15 +27,16 @@ function formatCount(count: number): string {
 }
 
 export function RoomsTable({ rooms }: { rooms: AdminRoom[] }) {
+  const [items, setItems] = useState(rooms);
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const normalized = query.trim().toLowerCase();
 
   const visible = useMemo(() => {
     if (!normalized) {
-      return rooms;
+      return items;
     }
-    return rooms.filter((room) => {
+    return items.filter((room) => {
       const haystack = [
         room.id,
         room.name,
@@ -36,7 +48,7 @@ export function RoomsTable({ rooms }: { rooms: AdminRoom[] }) {
         .toLowerCase();
       return haystack.includes(normalized);
     });
-  }, [normalized, rooms]);
+  }, [normalized, items]);
 
   return (
     <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
@@ -52,11 +64,11 @@ export function RoomsTable({ rooms }: { rooms: AdminRoom[] }) {
           />
         </label>
         <p className="text-xs text-zinc-500">
-          {visible.length} of {rooms.length}
+          {visible.length} of {items.length}
         </p>
       </div>
 
-      {rooms.length === 0 ? (
+      {items.length === 0 ? (
         <p className="px-4 py-10 text-sm text-zinc-500">No rooms on this page.</p>
       ) : visible.length === 0 ? (
         <p className="px-4 py-10 text-sm text-zinc-500">
@@ -101,6 +113,11 @@ export function RoomsTable({ rooms }: { rooms: AdminRoom[] }) {
                     expanded={expanded}
                     detailId={detailId}
                     onToggle={() => setExpandedId(expanded ? null : room.id)}
+                    onRoomUpdated={(updated) => {
+                      setItems((current) =>
+                        current.map((item) => (item.id === updated.id ? updated : item)),
+                      );
+                    }}
                   />
                 );
               })}
@@ -117,12 +134,44 @@ function RoomRows({
   expanded,
   detailId,
   onToggle,
+  onRoomUpdated,
 }: {
   room: AdminRoom;
   expanded: boolean;
   detailId: string;
   onToggle: () => void;
+  onRoomUpdated: (room: AdminRoom) => void;
 }) {
+  const [pendingFlag, setPendingFlag] = useState<RoomFlag | null>(null);
+  const [flagError, setFlagError] = useState<{ message: string; status?: number } | null>(
+    null,
+  );
+  const pendingRef = useRef<RoomFlag | null>(null);
+
+  async function toggleFlag(flag: RoomFlag, enabled: boolean) {
+    if (pendingRef.current) {
+      return;
+    }
+    pendingRef.current = flag;
+    setPendingFlag(flag);
+    setFlagError(null);
+    try {
+      const result = await updateRoomFlag({ id: room.id, flag, enabled });
+      if (result.ok) {
+        onRoomUpdated(result.data);
+      } else {
+        setFlagError({ message: result.message, status: result.status });
+      }
+    } catch (error) {
+      setFlagError({
+        message: error instanceof Error ? error.message : "Could not update the room flag.",
+      });
+    } finally {
+      pendingRef.current = null;
+      setPendingFlag(null);
+    }
+  }
+
   return (
     <>
       <tr
@@ -175,7 +224,14 @@ function RoomRows({
       {expanded ? (
         <tr>
           <td id={detailId} colSpan={7} className="bg-zinc-50 px-4 py-4">
-            <RoomDetail room={room} />
+            <RoomDetail
+              room={room}
+              pendingFlag={pendingFlag}
+              flagError={flagError}
+              onToggleFlag={(flag, enabled) => {
+                void toggleFlag(flag, enabled);
+              }}
+            />
           </td>
         </tr>
       ) : null}
@@ -201,28 +257,89 @@ function FlagChips({ flags }: { flags: string[] }) {
   );
 }
 
-function RoomDetail({ room }: { room: AdminRoom }) {
+function RoomDetail({
+  room,
+  pendingFlag,
+  flagError,
+  onToggleFlag,
+}: {
+  room: AdminRoom;
+  pendingFlag: RoomFlag | null;
+  flagError: { message: string; status?: number } | null;
+  onToggleFlag: (flag: RoomFlag, enabled: boolean) => void;
+}) {
+  const otherFlags = room.flags.filter((flag) => !KNOWN_FLAGS.has(flag));
+  const pending = pendingFlag !== null;
+
   return (
-    <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-      <DetailField label="Room ID" value={room.id} mono />
-      <DetailField label="Name" value={room.name} />
-      <DetailField label="Host ID" value={room.hostId} mono />
-      <DetailField
-        label="Host username"
-        value={room.hostUsername ? `@${room.hostUsername}` : "—"}
-      />
-      <DetailField label="Status" value={room.status} />
-      <DetailField label="Participants" value={formatCount(room.participantCount)} />
-      <DetailField label="Created" value={formatTimestamp(room.createdAt)} />
-      <div className="sm:col-span-2 lg:col-span-3">
-        <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+    <div className="grid gap-4">
+      <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        <DetailField label="Room ID" value={room.id} mono />
+        <DetailField label="Name" value={room.name} />
+        <DetailField label="Host ID" value={room.hostId} mono />
+        <DetailField
+          label="Host username"
+          value={room.hostUsername ? `@${room.hostUsername}` : "—"}
+        />
+        <DetailField label="Status" value={room.status} />
+        <DetailField label="Participants" value={formatCount(room.participantCount)} />
+        <DetailField label="Created" value={formatTimestamp(room.createdAt)} />
+      </dl>
+      <fieldset aria-busy={pending} className="min-w-0">
+        <legend className="text-xs font-medium uppercase tracking-wide text-zinc-500">
           Flags
-        </dt>
-        <dd className="mt-1">
-          <FlagChips flags={room.flags} />
-        </dd>
-      </div>
-    </dl>
+        </legend>
+        <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+          {ROOM_FLAGS.map((flag) => {
+            const enabled = room.flags.includes(flag);
+            const updating = pendingFlag === flag;
+            return (
+              <li key={flag}>
+                <label
+                  className={`flex items-start gap-3 rounded-md border border-zinc-200 bg-white px-3 py-2 ${
+                    pending ? "cursor-wait" : "cursor-pointer"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    disabled={pending}
+                    onChange={(event) => onToggleFlag(flag, event.target.checked)}
+                    className="mt-0.5"
+                    aria-busy={updating}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-zinc-900">
+                      {FLAG_LABELS[flag]}
+                    </span>
+                    <span className="block font-mono text-xs text-zinc-500">
+                      {updating ? `Updating ${flag}…` : flag}
+                    </span>
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      </fieldset>
+      {otherFlags.length > 0 ? (
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Other flags
+          </p>
+          <div className="mt-1">
+            <FlagChips flags={otherFlags} />
+          </div>
+        </div>
+      ) : null}
+      {flagError ? (
+        <ApiError
+          title="Could not update room flag"
+          message={flagError.message}
+          status={flagError.status}
+        />
+      ) : null}
+    </div>
   );
 }
 

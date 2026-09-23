@@ -40,7 +40,7 @@ export default async function RoomsPage({
     <section>
       <PageHeader
         title="Rooms / Flags"
-        description="Read-only rooms from GET /v1/admin/rooms. Search filters the current page."
+        description="Rooms from GET /v1/admin/rooms. Search filters the current page. The detail panel toggles known flags with PATCH /v1/admin/rooms/{id}/flags."
         mock={result.mock}
         baseUrl={result.baseUrl}
       />
