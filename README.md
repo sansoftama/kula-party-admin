@@ -8,7 +8,7 @@ Package manager: npm.
 
 ## Run
 
-Start the Ktor service from [kula-party-backend](https://github.com/sansoftama/kula-party-backend) on `http://localhost:8080` with `ADMIN_API_TOKEN=dev-admin-token`. This UI calls `GET /v1/admin/health` and `GET /v1/admin/users` with `Authorization: Bearer dev-admin-token`.
+Start the Ktor service from [kula-party-backend](https://github.com/sansoftama/kula-party-backend) on `http://localhost:8080` with `ADMIN_API_TOKEN=dev-admin-token`. This UI calls `GET /v1/admin/health`, `GET /v1/admin/users`, and `GET /v1/admin/reports` with `Authorization: Bearer dev-admin-token`.
 
 ```bash
 cp .env.example .env.local
@@ -45,10 +45,13 @@ There is no login screen in this version. The header shows a placeholder, “Sig
 | --- | --- |
 | `/` and `/health` | `GET /v1/admin/health` |
 | `/users` | `GET /v1/admin/users?limit=&cursor=` |
+| `/moderation` | `GET /v1/admin/reports?limit=&cursor=&status=` |
 
-The sidebar also lists Moderation, Payments, Leaderboards, Rooms / Flags, and Support. Those items are inactive.
+The sidebar also lists Payments, Leaderboards, Rooms / Flags, and Support. Those items are inactive.
 
 Users is read-only. The search box filters the page already loaded. It does not send a search query, and there are no ban or suspend actions.
+
+Moderation calls `GET /v1/admin/reports`. It is read-only. Status chips send `status` as `open`, `resolved`, or `dismissed` (omit the param for all statuses). The default `limit` is 20. The search box filters the page already loaded by reporter, target, and reason. It does not send a search query, and there are no resolve, dismiss, or ban actions.
 
 ## Contracts
 
@@ -75,13 +78,29 @@ Implemented by kula-party-backend. The typed client is `src/lib/admin-api.ts`. S
   }>;
   nextCursor?: string | null;
 }
+
+// GET /v1/admin/reports?limit=20&cursor=...&status=open
+{
+  items: Array<{
+    id: string;
+    reporterId: string;
+    reporterUsername?: string;
+    targetType: "user" | "room";
+    targetId: string;
+    targetLabel?: string;
+    reason: string;
+    status: "open" | "resolved" | "dismissed";
+    createdAt: string;
+  }>;
+  nextCursor?: string | null;
+}
 ```
 
-With `USE_MOCK_ADMIN_API=true`, responses match those shapes. Mock user cursors are numeric offsets (`0`, `8`, …) so `?limit=3` pages through the fixture list.
+With `USE_MOCK_ADMIN_API=true`, responses match those shapes. Mock user and report cursors are numeric offsets (`0`, `8`, …) so `?limit=3` pages through the fixture list. Report fixtures are filtered by `status` before that offset is applied.
 
 ## Out of scope
 
 - Consumer Android code
 - A second API (no Node/Express/Fastify server in this repo)
 - Retool or other hosted admin builders
-- Login, roles, bans, payments, moderation, or room controls
+- Login, roles, bans, payments, report actions, or room controls
