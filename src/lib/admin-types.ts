@@ -6,6 +6,7 @@
  * GET /v1/admin/users?limit=&cursor=
  * GET /v1/admin/reports?limit=&cursor=&status=
  * GET /v1/admin/payments?limit=&cursor=&status=
+ * GET /v1/admin/leaderboards?limit=&cursor=&board=
  */
 
 export type CheckStatus = "up" | "down";
@@ -71,6 +72,23 @@ export type AdminPayment = {
 
 export type AdminPaymentsPage = {
   items: AdminPayment[];
+  nextCursor?: string | null;
+};
+
+export type LeaderboardBoard = "daily" | "weekly" | "all_time";
+
+export type AdminLeaderboardEntry = {
+  id: string;
+  board: LeaderboardBoard;
+  rank: number;
+  userId: string;
+  username?: string;
+  score: number;
+  updatedAt: string;
+};
+
+export type AdminLeaderboardsPage = {
+  items: AdminLeaderboardEntry[];
   nextCursor?: string | null;
 };
 

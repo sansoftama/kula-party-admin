@@ -1,11 +1,14 @@
 import type {
   AdminHealth,
+  AdminLeaderboardEntry,
+  AdminLeaderboardsPage,
   AdminPayment,
   AdminPaymentsPage,
   AdminReport,
   AdminReportsPage,
   AdminUser,
   AdminUsersPage,
+  LeaderboardBoard,
   PaymentStatus,
   ReportStatus,
 } from "@/lib/admin-types";
@@ -573,6 +576,155 @@ export function mockPayments(
   const source = status
     ? MOCK_PAYMENTS.filter((payment) => payment.status === status)
     : MOCK_PAYMENTS;
+  const start = cursor === undefined ? 0 : Number(cursor);
+  if (!Number.isInteger(start) || start < 0 || start > source.length) {
+    return { items: [], nextCursor: null };
+  }
+
+  const items = source.slice(start, start + limit);
+  const nextIndex = start + limit;
+  return {
+    items,
+    nextCursor: nextIndex < source.length ? String(nextIndex) : null,
+  };
+}
+
+const MOCK_LEADERBOARDS: AdminLeaderboardEntry[] = [
+  {
+    id: "lb_daily_01",
+    board: "daily",
+    rank: 1,
+    userId: "usr_01HZXK8A",
+    username: "amara",
+    score: 48200,
+    updatedAt: "2026-09-23T18:41:00.000Z",
+  },
+  {
+    id: "lb_daily_02",
+    board: "daily",
+    rank: 2,
+    userId: "usr_01HZY2M1",
+    username: "leo.waves",
+    score: 45110,
+    updatedAt: "2026-09-23T18:22:00.000Z",
+  },
+  {
+    id: "lb_daily_03",
+    board: "daily",
+    rank: 3,
+    userId: "usr_01J0AAN4",
+    username: "nabila",
+    score: 39840,
+    updatedAt: "2026-09-23T17:05:00.000Z",
+  },
+  {
+    id: "lb_daily_04",
+    board: "daily",
+    rank: 4,
+    userId: "usr_01J0BBP8",
+    username: "dj_kito",
+    score: 30120,
+    updatedAt: "2026-09-23T15:48:00.000Z",
+  },
+  {
+    id: "lb_daily_05",
+    board: "daily",
+    rank: 5,
+    userId: "usr_01J9NOUSER",
+    score: 18840,
+    updatedAt: "2026-09-23T11:02:00.000Z",
+  },
+  {
+    id: "lb_weekly_01",
+    board: "weekly",
+    rank: 1,
+    userId: "usr_01HZXK8A",
+    username: "amara",
+    score: 210400,
+    updatedAt: "2026-09-23T18:41:00.000Z",
+  },
+  {
+    id: "lb_weekly_02",
+    board: "weekly",
+    rank: 2,
+    userId: "usr_01J3EES0",
+    username: "host.ada",
+    score: 188220,
+    updatedAt: "2026-09-22T21:16:00.000Z",
+  },
+  {
+    id: "lb_weekly_03",
+    board: "weekly",
+    rank: 3,
+    userId: "usr_01J4FFT4",
+    username: "ghostline",
+    score: 162900,
+    updatedAt: "2026-09-22T09:33:00.000Z",
+  },
+  {
+    id: "lb_weekly_04",
+    board: "weekly",
+    rank: 4,
+    userId: "usr_01J1CCQ2",
+    username: "mira.room",
+    score: 140110,
+    updatedAt: "2026-09-21T19:08:00.000Z",
+  },
+  {
+    id: "lb_all_01",
+    board: "all_time",
+    rank: 1,
+    userId: "usr_01HZXK8A",
+    username: "amara",
+    score: 1204800,
+    updatedAt: "2026-09-23T18:41:00.000Z",
+  },
+  {
+    id: "lb_all_02",
+    board: "all_time",
+    rank: 2,
+    userId: "usr_01HZY2M1",
+    username: "leo.waves",
+    score: 980220,
+    updatedAt: "2026-09-20T14:12:00.000Z",
+  },
+  {
+    id: "lb_all_03",
+    board: "all_time",
+    rank: 3,
+    userId: "usr_01J0BBP8",
+    username: "dj_kito",
+    score: 844100,
+    updatedAt: "2026-09-18T08:44:00.000Z",
+  },
+  {
+    id: "lb_all_04",
+    board: "all_time",
+    rank: 4,
+    userId: "usr_01J0AAN4",
+    username: "nabila",
+    score: 701550,
+    updatedAt: "2026-09-12T16:27:00.000Z",
+  },
+  {
+    id: "lb_all_05",
+    board: "all_time",
+    rank: 5,
+    userId: "usr_01J2DDR6",
+    username: "sami",
+    score: 655040,
+    updatedAt: "2026-09-04T11:19:00.000Z",
+  },
+];
+
+export function mockLeaderboards(
+  limit: number,
+  cursor?: string,
+  board?: LeaderboardBoard,
+): AdminLeaderboardsPage {
+  const source = board
+    ? MOCK_LEADERBOARDS.filter((entry) => entry.board === board)
+    : MOCK_LEADERBOARDS;
   const start = cursor === undefined ? 0 : Number(cursor);
   if (!Number.isInteger(start) || start < 0 || start > source.length) {
     return { items: [], nextCursor: null };

@@ -1,4 +1,8 @@
-import type { PaymentStatus, ReportStatus } from "@/lib/admin-types";
+import type {
+  LeaderboardBoard,
+  PaymentStatus,
+  ReportStatus,
+} from "@/lib/admin-types";
 
 const REPORT_STATUSES = new Set<ReportStatus>(["open", "resolved", "dismissed"]);
 const PAYMENT_STATUSES = new Set<PaymentStatus>([
@@ -6,6 +10,11 @@ const PAYMENT_STATUSES = new Set<PaymentStatus>([
   "succeeded",
   "failed",
   "refunded",
+]);
+const LEADERBOARD_BOARDS = new Set<LeaderboardBoard>([
+  "daily",
+  "weekly",
+  "all_time",
 ]);
 
 // IDR amounts are whole rupiah. Other currencies are minor units (cents).
@@ -62,6 +71,17 @@ export function parsePaymentStatus(
   const trimmed = value?.trim();
   if (trimmed && PAYMENT_STATUSES.has(trimmed as PaymentStatus)) {
     return trimmed as PaymentStatus;
+  }
+  return undefined;
+}
+
+export function parseLeaderboardBoard(
+  raw: string | string[] | undefined,
+): LeaderboardBoard | undefined {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const trimmed = value?.trim();
+  if (trimmed && LEADERBOARD_BOARDS.has(trimmed as LeaderboardBoard)) {
+    return trimmed as LeaderboardBoard;
   }
   return undefined;
 }
