@@ -8,7 +8,7 @@ Package manager: npm.
 
 ## Run
 
-Start the Ktor service from [kula-party-backend](https://github.com/sansoftama/kula-party-backend) on `http://localhost:8080` with `ADMIN_API_TOKEN=dev-admin-token`. This UI calls `GET /v1/admin/health`, `GET /v1/admin/users`, `GET /v1/admin/reports`, `GET /v1/admin/payments`, `GET /v1/admin/leaderboards`, and `GET /v1/admin/rooms` with `Authorization: Bearer dev-admin-token`.
+Start the Ktor service from [kula-party-backend](https://github.com/sansoftama/kula-party-backend) on `http://localhost:8080` with `ADMIN_API_TOKEN=dev-admin-token`. This UI calls `GET /v1/admin/health`, `GET /v1/admin/users`, `GET /v1/admin/reports`, `GET /v1/admin/payments`, `GET /v1/admin/leaderboards`, `GET /v1/admin/rooms`, and `GET /v1/admin/support/tickets` with `Authorization: Bearer dev-admin-token`.
 
 ```bash
 cp .env.example .env.local
@@ -49,8 +49,7 @@ There is no login screen in this version. The header shows a placeholder, “Sig
 | `/payments` | `GET /v1/admin/payments?limit=&cursor=&status=` |
 | `/leaderboards` | `GET /v1/admin/leaderboards?limit=&cursor=&board=` |
 | `/rooms` | `GET /v1/admin/rooms?limit=&cursor=&status=` |
-
-The sidebar also lists Support. That item is inactive.
+| `/support` | `GET /v1/admin/support/tickets?limit=&cursor=&status=` |
 
 Users is read-only. The search box filters the page already loaded. It does not send a search query, and there are no ban or suspend actions.
 
@@ -61,6 +60,8 @@ Payments calls `GET /v1/admin/payments`. It is read-only. Status chips send `sta
 Leaderboards calls `GET /v1/admin/leaderboards`. It is read-only. Board chips send `board` as `daily`, `weekly`, or `all_time` (omit the param for all boards). The default `limit` is 20. The search box filters the page already loaded by id, username, and user id. It does not send a search query, and there are no reset, edit, or wipe actions.
 
 Rooms / Flags calls `GET /v1/admin/rooms`. It is read-only. Status chips send `status` as `live`, `idle`, or `closed` (omit the param for all statuses). The default `limit` is 20. The search box filters the page already loaded by id, name, host username, host id, and flag names. It does not send a search query, and there are no flag edits, kick, close, or ban actions.
+
+Support calls `GET /v1/admin/support/tickets`. It is read-only. Status chips send `status` as `open`, `pending`, `resolved`, or `closed` (omit the param for all statuses). The default `limit` is 20. The search box filters the page already loaded by id, subject, username, user id, and body preview. It does not send a search query, and there are no reply, resolve, close, or assign actions.
 
 ## Contracts
 
@@ -149,13 +150,29 @@ Implemented by kula-party-backend. The typed client is `src/lib/admin-api.ts`. S
   }>;
   nextCursor?: string | null;
 }
+
+// GET /v1/admin/support/tickets?limit=20&cursor=...&status=open
+{
+  items: Array<{
+    id: string;
+    userId: string;
+    username?: string;
+    subject: string;
+    bodyPreview?: string;
+    status: "open" | "pending" | "resolved" | "closed";
+    priority: "low" | "normal" | "high";
+    createdAt: string; // ISO-8601
+    updatedAt?: string | null;
+  }>;
+  nextCursor?: string | null;
+}
 ```
 
-With `USE_MOCK_ADMIN_API=true`, responses match those shapes. Mock user, report, payment, leaderboard, and room cursors are numeric offsets (`0`, `8`, …) so `?limit=3` pages through the fixture list. Report, payment, and room fixtures are filtered by `status` before that offset is applied. Leaderboard fixtures are filtered by `board` before that offset is applied.
+With `USE_MOCK_ADMIN_API=true`, responses match those shapes. Mock user, report, payment, leaderboard, room, and support ticket cursors are numeric offsets (`0`, `8`, …) so `?limit=3` pages through the fixture list. Report, payment, room, and support ticket fixtures are filtered by `status` before that offset is applied. Leaderboard fixtures are filtered by `board` before that offset is applied.
 
 ## Out of scope
 
 - Consumer Android code
 - A second API (no Node/Express/Fastify server in this repo)
 - Retool or other hosted admin builders
-- Login, roles, bans, refund or capture actions, report actions, leaderboard score edits, room flag edits, or room controls
+- Login, roles, bans, refund or capture actions, report actions, leaderboard score edits, room flag edits, room controls, or support ticket actions

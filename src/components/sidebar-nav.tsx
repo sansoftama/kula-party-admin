@@ -50,7 +50,13 @@ const NAV_ITEMS: NavItem[] = [
     enabled: true,
     isActive: (pathname) => pathname === "/rooms" || pathname.startsWith("/rooms/"),
   },
-  { href: "/support", label: "Support", enabled: false },
+  {
+    href: "/support",
+    label: "Support",
+    enabled: true,
+    isActive: (pathname) =>
+      pathname === "/support" || pathname.startsWith("/support/"),
+  },
 ];
 
 export function SidebarNav() {

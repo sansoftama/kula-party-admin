@@ -8,12 +8,15 @@ import type {
   AdminReportsPage,
   AdminRoom,
   AdminRoomsPage,
+  AdminSupportTicket,
+  AdminSupportTicketsPage,
   AdminUser,
   AdminUsersPage,
   LeaderboardBoard,
   PaymentStatus,
   ReportStatus,
   RoomStatus,
+  SupportTicketStatus,
 } from "@/lib/admin-types";
 
 const MOCK_USERS: AdminUser[] = [
@@ -881,6 +884,212 @@ export function mockRooms(
   const source = status
     ? MOCK_ROOMS.filter((room) => room.status === status)
     : MOCK_ROOMS;
+  const start = cursor === undefined ? 0 : Number(cursor);
+  if (!Number.isInteger(start) || start < 0 || start > source.length) {
+    return { items: [], nextCursor: null };
+  }
+
+  const items = source.slice(start, start + limit);
+  const nextIndex = start + limit;
+  return {
+    items,
+    nextCursor: nextIndex < source.length ? String(nextIndex) : null,
+  };
+}
+
+const MOCK_SUPPORT_TICKETS: AdminSupportTicket[] = [
+  {
+    id: "tkt_01KASUP01",
+    userId: "usr_01HZXK8A",
+    username: "amara",
+    subject: "Charged twice for the same gift pack",
+    bodyPreview:
+      "Play receipt GPA.3341 shows two captures ten minutes apart. I only tapped buy once in Karaoke Night.",
+    status: "open",
+    priority: "high",
+    createdAt: "2026-09-23T19:12:00.000Z",
+    updatedAt: "2026-09-23T19:40:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP02",
+    userId: "usr_01HZY2M1",
+    username: "leo.waves",
+    subject: "Cannot hear the host after rejoining",
+    bodyPreview:
+      "Audio comes back for other listeners but the host stays silent until I leave Afrobeats Hour and come back.",
+    status: "open",
+    priority: "normal",
+    createdAt: "2026-09-23T16:05:00.000Z",
+    updatedAt: null,
+  },
+  {
+    id: "tkt_01KASUP03",
+    userId: "usr_01J9GUEST",
+    subject: "Display name stuck on the old spelling",
+    bodyPreview:
+      "I updated it in settings yesterday. The lobby still shows the previous name on my seat.",
+    status: "open",
+    priority: "low",
+    createdAt: "2026-09-22T21:18:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP04",
+    userId: "usr_01J0AAN4",
+    username: "nabila",
+    subject: "Room vanished while I was speaking",
+    bodyPreview:
+      "Study Hall closed without a warning and I lost the last few minutes of the session notes in chat.",
+    status: "open",
+    priority: "high",
+    createdAt: "2026-09-22T11:44:00.000Z",
+    updatedAt: "2026-09-22T12:02:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP05",
+    userId: "usr_01J0BBP8",
+    username: "dj_kito",
+    subject: "Payout for last week is still pending",
+    bodyPreview:
+      "The host dashboard says the weekly gift total cleared, but the bank transfer has not arrived.",
+    status: "pending",
+    priority: "normal",
+    createdAt: "2026-09-21T09:33:00.000Z",
+    updatedAt: "2026-09-22T08:15:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP06",
+    userId: "usr_01J2DDR6",
+    username: "sami",
+    subject: "Login code never arrives by SMS",
+    status: "pending",
+    priority: "high",
+    createdAt: "2026-09-20T18:27:00.000Z",
+    updatedAt: null,
+  },
+  {
+    id: "tkt_01KASUP07",
+    userId: "usr_01J3EES0",
+    username: "host.ada",
+    subject: "VIP Lounge flag looks wrong on Android",
+    bodyPreview:
+      "The room is marked vip_only but a listener on an older build could still join from the public list.",
+    status: "pending",
+    priority: "low",
+    createdAt: "2026-09-19T14:51:00.000Z",
+    updatedAt: "2026-09-20T10:06:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP08",
+    userId: "usr_01J8NOUSER",
+    subject: "Waiting on a recording export",
+    bodyPreview:
+      "I requested the Open Mic recording two days ago. The email said it would be ready within an hour.",
+    status: "pending",
+    priority: "normal",
+    createdAt: "2026-09-18T07:12:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP09",
+    userId: "usr_01J4FFT4",
+    username: "ghostline",
+    subject: "Password reset link opened the wrong account",
+    bodyPreview:
+      "The link signed me into a brand new profile instead of ghostline. I can see the old one from another device.",
+    status: "resolved",
+    priority: "low",
+    createdAt: "2026-09-16T22:40:00.000Z",
+    updatedAt: "2026-09-17T15:22:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP10",
+    userId: "usr_01J1CCQ2",
+    username: "mira.room",
+    subject: "Gift animation froze the room",
+    bodyPreview:
+      "A large gift in City Pop locked the stage for everyone until the host restarted the room.",
+    status: "resolved",
+    priority: "normal",
+    createdAt: "2026-09-14T19:08:00.000Z",
+    updatedAt: "2026-09-15T11:47:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP11",
+    userId: "usr_01HZXK8A",
+    username: "amara",
+    subject: "Refund for a failed Play purchase",
+    bodyPreview:
+      "The charge for GPA.3341-2201-8810-00018 failed in the app but the receipt still says captured.",
+    status: "resolved",
+    priority: "high",
+    createdAt: "2026-09-12T08:55:00.000Z",
+    updatedAt: "2026-09-13T09:30:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP12",
+    userId: "usr_01HZY2M1",
+    username: "leo.waves",
+    subject: "Leaderboard score did not update",
+    status: "resolved",
+    priority: "normal",
+    createdAt: "2026-09-09T16:21:00.000Z",
+    updatedAt: null,
+  },
+  {
+    id: "tkt_01KASUP13",
+    userId: "usr_01J0AAN4",
+    username: "nabila",
+    subject: "Old ticket about sticker spam",
+    bodyPreview:
+      "This was the duplicate of the moderation report. Closing it here so the queue stays tidy.",
+    status: "closed",
+    priority: "low",
+    createdAt: "2026-09-06T13:14:00.000Z",
+    updatedAt: "2026-09-07T09:01:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP14",
+    userId: "usr_01J0BBP8",
+    username: "dj_kito",
+    subject: "Question about featured room placement",
+    bodyPreview:
+      "Asked how Karaoke Night stays on the home row. The answer is in the host notes, so this can stay closed.",
+    status: "closed",
+    priority: "normal",
+    createdAt: "2026-09-02T20:36:00.000Z",
+    updatedAt: "2026-09-03T12:18:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP15",
+    userId: "usr_01J7CLOSED",
+    subject: "Account deletion confirmation",
+    bodyPreview:
+      "Requested deletion of a throwaway listener account after the Afterparty room closed.",
+    status: "closed",
+    priority: "high",
+    createdAt: "2026-08-28T11:49:00.000Z",
+    updatedAt: "2026-08-29T08:05:00.000Z",
+  },
+  {
+    id: "tkt_01KASUP16",
+    userId: "usr_01J3EES0",
+    username: "host.ada",
+    subject: "Thanks, the mute button works again",
+    bodyPreview:
+      "Follow-up from the Late Lobby audio bug. No further help needed.",
+    status: "closed",
+    priority: "low",
+    createdAt: "2026-08-21T17:02:00.000Z",
+  },
+];
+
+export function mockSupportTickets(
+  limit: number,
+  cursor?: string,
+  status?: SupportTicketStatus,
+): AdminSupportTicketsPage {
+  const source = status
+    ? MOCK_SUPPORT_TICKETS.filter((ticket) => ticket.status === status)
+    : MOCK_SUPPORT_TICKETS;
   const start = cursor === undefined ? 0 : Number(cursor);
   if (!Number.isInteger(start) || start < 0 || start > source.length) {
     return { items: [], nextCursor: null };
