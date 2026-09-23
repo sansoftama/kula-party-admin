@@ -15,6 +15,7 @@ import type {
   LeaderboardBoard,
   PaymentStatus,
   ReportStatus,
+  RoomFlag,
   RoomStatus,
   SupportTicketStatus,
 } from "@/lib/admin-types";
@@ -895,6 +896,32 @@ export function mockRooms(
     items,
     nextCursor: nextIndex < source.length ? String(nextIndex) : null,
   };
+}
+
+export function mockPatchRoomFlag(
+  id: string,
+  flag: RoomFlag,
+  enabled: boolean,
+): AdminRoom | undefined {
+  const index = MOCK_ROOMS.findIndex((room) => room.id === id);
+  if (index === -1) {
+    return undefined;
+  }
+
+  const current = MOCK_ROOMS[index];
+  const present = current.flags.includes(flag);
+  let flags = current.flags;
+  if (enabled && !present) {
+    flags = [...current.flags, flag];
+  } else if (!enabled && present) {
+    flags = current.flags.filter((name) => name !== flag);
+  } else {
+    flags = [...current.flags];
+  }
+
+  const updated: AdminRoom = { ...current, flags };
+  MOCK_ROOMS[index] = updated;
+  return updated;
 }
 
 const MOCK_SUPPORT_TICKETS: AdminSupportTicket[] = [

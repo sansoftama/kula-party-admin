@@ -2,28 +2,32 @@ import "server-only";
 
 import { connection } from "next/server";
 
-import type {
-  AdminApiResult,
-  AdminHealth,
-  AdminLeaderboardsPage,
-  AdminPaymentsPage,
-  AdminReportsPage,
-  AdminRoomsPage,
-  AdminSupportTicketsPage,
-  AdminUsersPage,
-  CheckStatus,
-  LeaderboardBoard,
-  PaymentStatus,
-  ReportStatus,
-  ReportTargetType,
-  RoomStatus,
-  SupportTicketPriority,
-  SupportTicketStatus,
-  UserStatus,
+import {
+  ROOM_FLAGS,
+  type AdminApiResult,
+  type AdminHealth,
+  type AdminLeaderboardsPage,
+  type AdminPaymentsPage,
+  type AdminReportsPage,
+  type AdminRoom,
+  type AdminRoomsPage,
+  type AdminSupportTicketsPage,
+  type AdminUsersPage,
+  type CheckStatus,
+  type LeaderboardBoard,
+  type PaymentStatus,
+  type ReportStatus,
+  type ReportTargetType,
+  type RoomFlag,
+  type RoomStatus,
+  type SupportTicketPriority,
+  type SupportTicketStatus,
+  type UserStatus,
 } from "@/lib/admin-types";
 import {
   mockHealth,
   mockLeaderboards,
+  mockPatchRoomFlag,
   mockPayments,
   mockReports,
   mockRooms,
@@ -48,6 +52,7 @@ const LEADERBOARD_BOARDS = new Set<LeaderboardBoard>([
   "all_time",
 ]);
 const ROOM_STATUSES = new Set<RoomStatus>(["live", "idle", "closed"]);
+const ROOM_FLAG_VALUES = new Set<string>(ROOM_FLAGS);
 const SUPPORT_TICKET_STATUSES = new Set<SupportTicketStatus>([
   "open",
   "pending",
@@ -137,6 +142,7 @@ async function requestJson<T>(
   path: string,
   parse: (value: unknown) => T,
   query?: URLSearchParams,
+  body?: unknown,
 ): Promise<T> {
   const token = readEnv("ADMIN_API_TOKEN");
   if (!token) {
@@ -145,6 +151,7 @@ async function requestJson<T>(
     );
   }
 
+  const method = body === undefined ? "GET" : "PATCH";
   const url =
     query && [...query.keys()].length > 0
       ? `${baseUrl}${path}?${query.toString()}`
@@ -153,11 +160,13 @@ async function requestJson<T>(
   let response: Response;
   try {
     response = await fetch(url, {
-      method: "GET",
+      method,
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${token}`,
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
+      body: body === undefined ? undefined : JSON.stringify(body),
       cache: "no-store",
       signal: AbortSignal.timeout(10_000),
     });
@@ -167,27 +176,27 @@ async function requestJson<T>(
 
   if (!response.ok) {
     throw new AdminApiError(
-      `GET ${path} returned HTTP ${response.status}.`,
+      `${method} ${path} returned HTTP ${response.status}.`,
       response.status,
     );
   }
 
-  let body: unknown;
+  let payload: unknown;
   try {
-    body = await response.json();
+    payload = await response.json();
   } catch {
     throw new AdminApiError(
-      `GET ${path} returned a body that was not JSON.`,
+      `${method} ${path} returned a body that was not JSON.`,
       response.status,
     );
   }
 
   try {
-    return parse(body);
+    return parse(payload);
   } catch (error) {
     const detail = error instanceof Error ? error.message : "invalid payload";
     throw new AdminApiError(
-      `GET ${path} returned an unexpected payload: ${detail}.`,
+      `${method} ${path} returned an unexpected payload: ${detail}.`,
       response.status,
     );
   }
@@ -489,6 +498,51 @@ function parseLeaderboards(value: unknown): AdminLeaderboardsPage {
   return {
     items,
     nextCursor: record.nextCursor ?? null,
+  };
+}
+
+function parseRoom(value: unknown): AdminRoom {
+  const room = expectObject(value, "Room response");
+  if (typeof room.id !== "string" || room.id.length === 0) {
+    throw new Error("id must be a string");
+  }
+  if (typeof room.name !== "string" || room.name.length === 0) {
+    throw new Error("name must be a string");
+  }
+  if (typeof room.hostId !== "string" || room.hostId.length === 0) {
+    throw new Error("hostId must be a string");
+  }
+  if (room.hostUsername !== undefined && typeof room.hostUsername !== "string") {
+    throw new Error("hostUsername must be a string");
+  }
+  if (typeof room.status !== "string" || !ROOM_STATUSES.has(room.status as RoomStatus)) {
+    throw new Error("status must be live, idle, or closed");
+  }
+  if (
+    typeof room.participantCount !== "number" ||
+    !Number.isFinite(room.participantCount)
+  ) {
+    throw new Error("participantCount must be a number");
+  }
+  if (
+    !Array.isArray(room.flags) ||
+    room.flags.some((flag) => typeof flag !== "string" || flag.length === 0)
+  ) {
+    throw new Error("flags must be an array of strings");
+  }
+  if (typeof room.createdAt !== "string" || room.createdAt.length === 0) {
+    throw new Error("createdAt must be a string");
+  }
+
+  return {
+    id: room.id,
+    name: room.name,
+    hostId: room.hostId,
+    hostUsername: room.hostUsername,
+    status: room.status as RoomStatus,
+    participantCount: room.participantCount,
+    flags: room.flags as string[],
+    createdAt: room.createdAt,
   };
 }
 
@@ -806,6 +860,53 @@ export async function getAdminRooms(input: {
       query.set("status", input.status);
     }
     const data = await requestJson(baseUrl, "/v1/admin/rooms", parseRooms, query);
+    return { ok: true, data, mock, baseUrl };
+  } catch (error) {
+    return failure(error, mock, baseUrl);
+  }
+}
+
+export async function patchAdminRoomFlag(input: {
+  id: string;
+  flag: RoomFlag;
+  enabled: boolean;
+}): Promise<AdminApiResult<AdminRoom>> {
+  await connection();
+  const mock = isMockAdminApi();
+  let baseUrl = DEFAULT_BASE_URL;
+  const id = typeof input.id === "string" ? input.id.trim() : "";
+  const path = `/v1/admin/rooms/${encodeURIComponent(id)}/flags`;
+  try {
+    baseUrl = adminApiBaseUrl();
+    if (!id) {
+      throw new AdminApiError("Room id is required.", 400);
+    }
+    if (typeof input.enabled !== "boolean") {
+      throw new AdminApiError("enabled must be a boolean.", 400);
+    }
+    if (!ROOM_FLAG_VALUES.has(input.flag)) {
+      throw new AdminApiError(
+        "flag must be featured, nsfw_lock, recording, or vip_only.",
+        400,
+      );
+    }
+
+    const flag = input.flag as RoomFlag;
+    if (mock) {
+      const data = mockPatchRoomFlag(id, flag, input.enabled);
+      if (!data) {
+        throw new AdminApiError(`PATCH ${path} returned HTTP 404.`, 404);
+      }
+      return { ok: true, data, mock, baseUrl };
+    }
+
+    const data = await requestJson(
+      baseUrl,
+      path,
+      parseRoom,
+      undefined,
+      { flag, enabled: input.enabled },
+    );
     return { ok: true, data, mock, baseUrl };
   } catch (error) {
     return failure(error, mock, baseUrl);
