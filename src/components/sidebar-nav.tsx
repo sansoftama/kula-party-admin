@@ -30,7 +30,13 @@ const NAV_ITEMS: NavItem[] = [
     isActive: (pathname) =>
       pathname === "/moderation" || pathname.startsWith("/moderation/"),
   },
-  { href: "/payments", label: "Payments", enabled: false },
+  {
+    href: "/payments",
+    label: "Payments",
+    enabled: true,
+    isActive: (pathname) =>
+      pathname === "/payments" || pathname.startsWith("/payments/"),
+  },
   { href: "/leaderboards", label: "Leaderboards", enabled: false },
   { href: "/rooms", label: "Rooms / Flags", enabled: false },
   { href: "/support", label: "Support", enabled: false },

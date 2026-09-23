@@ -1,9 +1,12 @@
 import type {
   AdminHealth,
+  AdminPayment,
+  AdminPaymentsPage,
   AdminReport,
   AdminReportsPage,
   AdminUser,
   AdminUsersPage,
+  PaymentStatus,
   ReportStatus,
 } from "@/lib/admin-types";
 
@@ -340,6 +343,207 @@ export function mockUsers(limit: number, cursor?: string): AdminUsersPage {
   };
 }
 
+const MOCK_PAYMENTS: AdminPayment[] = [
+  {
+    id: "pay_01K9PND01",
+    userId: "usr_01HZXK8A",
+    username: "amara",
+    amount: 49000,
+    currency: "IDR",
+    status: "pending",
+    provider: "play",
+    providerPaymentId: "GPA.3341-2201-8810-00011",
+    createdAt: "2026-09-21T09:12:00.000Z",
+    refundedAt: null,
+  },
+  {
+    id: "pay_01K9SUC01",
+    userId: "usr_01HZY2M1",
+    username: "leo.waves",
+    amount: 150000,
+    currency: "IDR",
+    status: "succeeded",
+    provider: "stripe",
+    providerPaymentId: "pi_3NxLeo150000",
+    createdAt: "2026-09-20T16:41:00.000Z",
+    refundedAt: null,
+  },
+  {
+    id: "pay_01K9FLD01",
+    userId: "usr_01J0AAN4",
+    username: "nabila",
+    amount: 500000,
+    currency: "IDR",
+    status: "failed",
+    provider: "play",
+    providerPaymentId: "GPA.3341-2201-8810-00042",
+    createdAt: "2026-09-19T11:05:00.000Z",
+    refundedAt: null,
+  },
+  {
+    id: "pay_01K9RFD01",
+    userId: "usr_01J2DDR6",
+    username: "sami",
+    amount: 49000,
+    currency: "IDR",
+    status: "refunded",
+    provider: "play",
+    providerPaymentId: "GPA.3341-2201-8810-00018",
+    createdAt: "2026-09-18T08:22:00.000Z",
+    refundedAt: "2026-09-19T14:03:00.000Z",
+  },
+  {
+    id: "pay_01K9PND02",
+    userId: "usr_01J0BBP8",
+    username: "dj_kito",
+    amount: 25000,
+    currency: "IDR",
+    status: "pending",
+    provider: "manual",
+    createdAt: "2026-09-17T21:18:00.000Z",
+  },
+  {
+    id: "pay_01K9SUC02",
+    userId: "usr_01J3EES0",
+    username: "host.ada",
+    amount: 499,
+    currency: "USD",
+    status: "succeeded",
+    provider: "stripe",
+    providerPaymentId: "pi_3NxAda0499",
+    createdAt: "2026-09-16T18:44:00.000Z",
+    refundedAt: null,
+  },
+  {
+    id: "pay_01K9FLD02",
+    userId: "usr_01J1CCQ2",
+    username: "mira.room",
+    amount: 1599,
+    currency: "USD",
+    status: "failed",
+    provider: "stripe",
+    providerPaymentId: "pi_3NxMira1599",
+    createdAt: "2026-09-15T07:31:00.000Z",
+    refundedAt: null,
+  },
+  {
+    id: "pay_01K9RFD02",
+    userId: "usr_01J4FFT4",
+    username: "ghostline",
+    amount: 1299,
+    currency: "EUR",
+    status: "refunded",
+    provider: "stripe",
+    providerPaymentId: "pi_3NxGhost1299",
+    createdAt: "2026-09-14T12:09:00.000Z",
+    refundedAt: "2026-09-15T09:40:00.000Z",
+  },
+  {
+    id: "pay_01K9PND03",
+    userId: "usr_01J2DDR6",
+    amount: 75000,
+    currency: "IDR",
+    status: "pending",
+    provider: "play",
+    providerPaymentId: "GPA.3390-1102-4400-00007",
+    createdAt: "2026-09-12T04:55:00.000Z",
+    refundedAt: null,
+  },
+  {
+    id: "pay_01K9SUC03",
+    userId: "usr_01HZXK8A",
+    username: "amara",
+    amount: 120000,
+    currency: "IDR",
+    status: "succeeded",
+    provider: "play",
+    providerPaymentId: "GPA.3341-2201-8810-00055",
+    createdAt: "2026-09-10T19:27:00.000Z",
+    refundedAt: null,
+  },
+  {
+    id: "pay_01K9FLD03",
+    userId: "usr_01J0BBP8",
+    username: "dj_kito",
+    amount: 10000,
+    currency: "IDR",
+    status: "failed",
+    provider: "manual",
+    createdAt: "2026-09-08T15:16:00.000Z",
+    refundedAt: null,
+  },
+  {
+    id: "pay_01K9RFD03",
+    userId: "usr_01HZY2M1",
+    username: "leo.waves",
+    amount: 75000,
+    currency: "IDR",
+    status: "refunded",
+    provider: "manual",
+    providerPaymentId: "man_20260906_leo",
+    createdAt: "2026-09-06T10:02:00.000Z",
+    refundedAt: "2026-09-07T11:28:00.000Z",
+  },
+  {
+    id: "pay_01K9PND04",
+    userId: "usr_01J4FFT4",
+    username: "ghostline",
+    amount: 200000,
+    currency: "IDR",
+    status: "pending",
+    provider: "stripe",
+    providerPaymentId: "pi_3NxGhostPending",
+    createdAt: "2026-09-04T22:47:00.000Z",
+    refundedAt: null,
+  },
+  {
+    id: "pay_01K9SUC04",
+    userId: "usr_01J0AAN4",
+    username: "nabila",
+    amount: 89000,
+    currency: "IDR",
+    status: "succeeded",
+    createdAt: "2026-09-02T13:33:00.000Z",
+    refundedAt: null,
+  },
+  {
+    id: "pay_01K9FLD04",
+    userId: "usr_01J3EES0",
+    username: "host.ada",
+    amount: 45000,
+    currency: "IDR",
+    status: "failed",
+    provider: "play",
+    providerPaymentId: "GPA.3341-2201-8810-00090",
+    createdAt: "2026-08-29T06:14:00.000Z",
+    refundedAt: null,
+  },
+  {
+    id: "pay_01K9RFD04",
+    userId: "usr_01J1CCQ2",
+    username: "mira.room",
+    amount: 15000,
+    currency: "IDR",
+    status: "refunded",
+    provider: "play",
+    providerPaymentId: "GPA.3341-2201-8810-00073",
+    createdAt: "2026-08-24T17:51:00.000Z",
+    refundedAt: "2026-08-25T08:12:00.000Z",
+  },
+  {
+    id: "pay_01K9SUC05",
+    userId: "usr_01J4FFT4",
+    username: "ghostline",
+    amount: 35000,
+    currency: "IDR",
+    status: "succeeded",
+    provider: "play",
+    providerPaymentId: "GPA.3390-1102-4400-00021",
+    createdAt: "2026-08-18T09:05:00.000Z",
+    refundedAt: null,
+  },
+];
+
 export function mockReports(
   limit: number,
   cursor?: string,
@@ -348,6 +552,27 @@ export function mockReports(
   const source = status
     ? MOCK_REPORTS.filter((report) => report.status === status)
     : MOCK_REPORTS;
+  const start = cursor === undefined ? 0 : Number(cursor);
+  if (!Number.isInteger(start) || start < 0 || start > source.length) {
+    return { items: [], nextCursor: null };
+  }
+
+  const items = source.slice(start, start + limit);
+  const nextIndex = start + limit;
+  return {
+    items,
+    nextCursor: nextIndex < source.length ? String(nextIndex) : null,
+  };
+}
+
+export function mockPayments(
+  limit: number,
+  cursor?: string,
+  status?: PaymentStatus,
+): AdminPaymentsPage {
+  const source = status
+    ? MOCK_PAYMENTS.filter((payment) => payment.status === status)
+    : MOCK_PAYMENTS;
   const start = cursor === undefined ? 0 : Number(cursor);
   if (!Number.isInteger(start) || start < 0 || start > source.length) {
     return { items: [], nextCursor: null };
