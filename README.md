@@ -8,13 +8,17 @@ Package manager: npm.
 
 ## Run
 
+Start the Ktor service from [kula-party-backend](https://github.com/sansoftama/kula-party-backend) on `http://localhost:8080` with `ADMIN_API_TOKEN=dev-admin-token`. This UI calls `GET /v1/admin/health` and `GET /v1/admin/users` with `Authorization: Bearer dev-admin-token`.
+
 ```bash
 cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The example env turns mock mode on, so both pages render without Ktor.
+Open [http://localhost:3000](http://localhost:3000). `.env.example` points at those stubs (`NEXT_PUBLIC_ADMIN_API_BASE_URL=http://localhost:8080`, `ADMIN_API_TOKEN=dev-admin-token`, `USE_MOCK_ADMIN_API=false`). `dev-admin-token` is a non-prod stub only. Do not commit `.env.local` or production secrets.
+
+For UI-only work without the backend, set `USE_MOCK_ADMIN_API=true` in `.env.local`. Mock mode serves typed fixtures and does not call Ktor.
 
 | Script | Purpose |
 | --- | --- |
@@ -25,13 +29,13 @@ Open [http://localhost:3000](http://localhost:3000). The example env turns mock 
 
 ## Environment
 
-Copy `.env.example` to `.env.local`. Do not commit real tokens.
+Copy `.env.example` to `.env.local`. Do not commit `.env.local` or production tokens. The example `ADMIN_API_TOKEN` is the non-prod stub `dev-admin-token`.
 
 | Variable | Where it is read | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_ADMIN_API_BASE_URL` | Server, request time | Ktor origin. Default `http://localhost:8080`. No path suffix. |
-| `ADMIN_API_TOKEN` | Server only | Sent as `Authorization: Bearer <token>`. Required when mock mode is off. |
-| `USE_MOCK_ADMIN_API` | Server, request time | `true` returns typed fixtures and does not call Ktor. Anything else calls the backend. |
+| `NEXT_PUBLIC_ADMIN_API_BASE_URL` | Server, request time | Ktor origin. Example and unset default: `http://localhost:8080`. No path suffix. |
+| `ADMIN_API_TOKEN` | Server only | Sent as `Authorization: Bearer <token>`. Required when mock mode is off. Local stub: `dev-admin-token`. |
+| `USE_MOCK_ADMIN_API` | Server, request time | Example default `false` calls Ktor. `true` returns typed fixtures and does not call the backend. |
 
 There is no login screen in this version. The header shows a placeholder, “Signed in as Admin”. Real admin auth stays on Ktor.
 
