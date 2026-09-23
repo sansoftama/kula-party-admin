@@ -4,6 +4,7 @@
  *
  * GET /v1/admin/health
  * GET /v1/admin/users?limit=&cursor=
+ * GET /v1/admin/reports?limit=&cursor=&status=
  */
 
 export type CheckStatus = "up" | "down";
@@ -28,6 +29,27 @@ export type AdminUser = {
 
 export type AdminUsersPage = {
   items: AdminUser[];
+  nextCursor?: string | null;
+};
+
+export type ReportTargetType = "user" | "room";
+
+export type ReportStatus = "open" | "resolved" | "dismissed";
+
+export type AdminReport = {
+  id: string;
+  reporterId: string;
+  reporterUsername?: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  targetLabel?: string;
+  reason: string;
+  status: ReportStatus;
+  createdAt: string;
+};
+
+export type AdminReportsPage = {
+  items: AdminReport[];
   nextCursor?: string | null;
 };
 

@@ -1,4 +1,11 @@
-import type { AdminHealth, AdminUser, AdminUsersPage } from "@/lib/admin-types";
+import type {
+  AdminHealth,
+  AdminReport,
+  AdminReportsPage,
+  AdminUser,
+  AdminUsersPage,
+  ReportStatus,
+} from "@/lib/admin-types";
 
 const MOCK_USERS: AdminUser[] = [
   {
@@ -71,6 +78,254 @@ export function mockHealth(): AdminHealth {
   };
 }
 
+const MOCK_REPORTS: AdminReport[] = [
+  {
+    id: "rpt_01K8OPEN01",
+    reporterId: "usr_01HZXK8A",
+    reporterUsername: "amara",
+    targetType: "user",
+    targetId: "usr_01J1CCQ2",
+    targetLabel: "mira.room",
+    reason:
+      "Repeated insults in the Friday karaoke room after hosts asked them to stop. Transcript attached by the reporter runs for several minutes.",
+    status: "open",
+    createdAt: "2026-09-18T21:14:00.000Z",
+  },
+  {
+    id: "rpt_01K8OPEN02",
+    reporterId: "usr_01J0BBP8",
+    reporterUsername: "dj_kito",
+    targetType: "room",
+    targetId: "room_karaoke_night",
+    targetLabel: "Karaoke Night",
+    reason:
+      "Room title and chat are advertising off-platform paid follows. The pinned message has been up since the room opened.",
+    status: "open",
+    createdAt: "2026-09-17T18:02:00.000Z",
+  },
+  {
+    id: "rpt_01K8RSLV01",
+    reporterId: "usr_01HZY2M1",
+    reporterUsername: "leo.waves",
+    targetType: "user",
+    targetId: "usr_01J4FFT4",
+    targetLabel: "ghostline",
+    reason: "Spam links dropped into three rooms in under a minute.",
+    status: "resolved",
+    createdAt: "2026-09-12T09:41:00.000Z",
+  },
+  {
+    id: "rpt_01K8DSMS01",
+    reporterId: "usr_01J3EES0",
+    reporterUsername: "host.ada",
+    targetType: "room",
+    targetId: "room_late_lobby",
+    targetLabel: "Late Lobby",
+    reason: "Loud background audio made the room unusable. Hosts already muted the source.",
+    status: "dismissed",
+    createdAt: "2026-09-11T23:18:00.000Z",
+  },
+  {
+    id: "rpt_01K8OPEN03",
+    reporterId: "usr_01J0AAN4",
+    reporterUsername: "nabila",
+    targetType: "user",
+    targetId: "usr_01J2DDR6",
+    targetLabel: "sami",
+    reason:
+      "Private messages asking for account credentials after a room ended. Reporter blocked the account and saved two screenshots.",
+    status: "open",
+    createdAt: "2026-09-10T14:27:00.000Z",
+  },
+  {
+    id: "rpt_01K8RSLV02",
+    reporterId: "usr_01HZXK8A",
+    reporterUsername: "amara",
+    targetType: "room",
+    targetId: "room_afrobeats",
+    targetLabel: "Afrobeats Hour",
+    reason: "Duplicate rooms were created to squat the same name. The extra room was closed.",
+    status: "resolved",
+    createdAt: "2026-09-08T16:05:00.000Z",
+  },
+  {
+    id: "rpt_01K8OPEN04",
+    reporterId: "usr_01J4FFT4",
+    reporterUsername: "ghostline",
+    targetType: "user",
+    targetId: "usr_01J0BBP8",
+    targetLabel: "dj_kito",
+    reason: "Harassment during a guest takeover. The reporter says the host kept unmuting them to shout.",
+    status: "open",
+    createdAt: "2026-09-07T20:44:00.000Z",
+  },
+  {
+    id: "rpt_01K8DSMS02",
+    reporterId: "usr_01J2DDR6",
+    targetType: "room",
+    targetId: "room_study_hall",
+    reason: "Reported as spam by mistake. The room is a quiet study session.",
+    status: "dismissed",
+    createdAt: "2026-09-06T11:12:00.000Z",
+  },
+  {
+    id: "rpt_01K8OPEN05",
+    reporterId: "usr_01HZY2M1",
+    reporterUsername: "leo.waves",
+    targetType: "room",
+    targetId: "room_open_mic",
+    targetLabel: "Open Mic",
+    reason:
+      "A listener shared another person's phone number in chat and refused to delete it when asked.",
+    status: "open",
+    createdAt: "2026-09-05T08:33:00.000Z",
+  },
+  {
+    id: "rpt_01K8RSLV03",
+    reporterId: "usr_01J0AAN4",
+    reporterUsername: "nabila",
+    targetType: "user",
+    targetId: "usr_01J1CCQ2",
+    targetLabel: "mira.room",
+    reason: "Impersonating a staff account with a similar display name. The display name was reset.",
+    status: "resolved",
+    createdAt: "2026-09-02T19:55:00.000Z",
+  },
+  {
+    id: "rpt_01K8OPEN06",
+    reporterId: "usr_01J3EES0",
+    reporterUsername: "host.ada",
+    targetType: "user",
+    targetId: "usr_01HZY2M1",
+    targetLabel: "leo.waves",
+    reason: "Inappropriate comments directed at another listener. Host removed the speaker and filed this report.",
+    status: "open",
+    createdAt: "2026-08-29T22:07:00.000Z",
+  },
+  {
+    id: "rpt_01K8DSMS03",
+    reporterId: "usr_01J0BBP8",
+    reporterUsername: "dj_kito",
+    targetType: "user",
+    targetId: "usr_01HZXK8A",
+    targetLabel: "amara",
+    reason: "Disagreement about song order. No rule violation in the attached clip.",
+    status: "dismissed",
+    createdAt: "2026-08-26T15:21:00.000Z",
+  },
+  {
+    id: "rpt_01K8OPEN07",
+    reporterId: "usr_01J1CCQ2",
+    reporterUsername: "mira.room",
+    targetType: "room",
+    targetId: "room_afterparty",
+    targetLabel: "Afterparty",
+    reason:
+      "Room description links to a phishing page that copies the Kula login screen. Several listeners said they entered a password there.",
+    status: "open",
+    createdAt: "2026-08-22T17:48:00.000Z",
+  },
+  {
+    id: "rpt_01K8RSLV04",
+    reporterId: "usr_01J4FFT4",
+    reporterUsername: "ghostline",
+    targetType: "room",
+    targetId: "room_city_pop",
+    targetLabel: "City Pop",
+    reason: "Copyrighted album was streamed in full. The room owner removed the track.",
+    status: "resolved",
+    createdAt: "2026-08-18T12:16:00.000Z",
+  },
+  {
+    id: "rpt_01K8OPEN08",
+    reporterId: "usr_01HZXK8A",
+    reporterUsername: "amara",
+    targetType: "user",
+    targetId: "usr_01J0AAN4",
+    targetLabel: "nabila",
+    reason: "Threats in chat after a vote. The messages are still visible to the room.",
+    status: "open",
+    createdAt: "2026-08-14T10:03:00.000Z",
+  },
+  {
+    id: "rpt_01K8DSMS04",
+    reporterId: "usr_01HZY2M1",
+    reporterUsername: "leo.waves",
+    targetType: "room",
+    targetId: "room_quiet_chill",
+    targetLabel: "Quiet Chill",
+    reason: "Reporter thought the room was abandoned. It was a scheduled listening session.",
+    status: "dismissed",
+    createdAt: "2026-08-09T06:40:00.000Z",
+  },
+  {
+    id: "rpt_01K8RSLV05",
+    reporterId: "usr_01J2DDR6",
+    reporterUsername: "sami",
+    targetType: "user",
+    targetId: "usr_01J3EES0",
+    targetLabel: "host.ada",
+    reason: "Account was sharing a referral code in every message. The messages were removed.",
+    status: "resolved",
+    createdAt: "2026-08-04T13:29:00.000Z",
+  },
+  {
+    id: "rpt_01K8OPEN09",
+    reporterId: "usr_01J0BBP8",
+    reporterUsername: "dj_kito",
+    targetType: "room",
+    targetId: "room_sunrise",
+    targetLabel: "Sunrise Set",
+    reason:
+      "Hate speech in the room topic. The topic was changed once and then set back by a co-host.",
+    status: "open",
+    createdAt: "2026-07-30T04:11:00.000Z",
+  },
+  {
+    id: "rpt_01K8OPEN10",
+    reporterId: "usr_01J3EES0",
+    reporterUsername: "host.ada",
+    targetType: "user",
+    targetId: "usr_01J4FFT4",
+    targetLabel: "ghostline",
+    reason: "New account flooding the lobby with the same sticker for an hour.",
+    status: "open",
+    createdAt: "2026-07-21T19:36:00.000Z",
+  },
+  {
+    id: "rpt_01K8RSLV06",
+    reporterId: "usr_01J0AAN4",
+    reporterUsername: "nabila",
+    targetType: "room",
+    targetId: "room_welcome",
+    targetLabel: "Welcome Desk",
+    reason: "Bot accounts were joining and leaving to inflate the listener count. They were removed.",
+    status: "resolved",
+    createdAt: "2026-07-15T08:52:00.000Z",
+  },
+  {
+    id: "rpt_01K8DSMS05",
+    reporterId: "usr_01J1CCQ2",
+    reporterUsername: "mira.room",
+    targetType: "user",
+    targetId: "usr_01J2DDR6",
+    targetLabel: "sami",
+    reason: "Reporter later said this was a joke between friends and asked to withdraw it.",
+    status: "dismissed",
+    createdAt: "2026-07-02T21:09:00.000Z",
+  },
+  {
+    id: "rpt_01K8RSLV07",
+    reporterId: "usr_01HZXK8A",
+    reporterUsername: "amara",
+    targetType: "room",
+    targetId: "room_archive",
+    reason: "Old room kept an outdated unsafe link in the description. The link was cleared.",
+    status: "resolved",
+    createdAt: "2026-06-20T15:47:00.000Z",
+  },
+];
+
 export function mockUsers(limit: number, cursor?: string): AdminUsersPage {
   const start = cursor === undefined ? 0 : Number(cursor);
   if (!Number.isInteger(start) || start < 0 || start > MOCK_USERS.length) {
@@ -82,5 +337,26 @@ export function mockUsers(limit: number, cursor?: string): AdminUsersPage {
   return {
     items,
     nextCursor: nextIndex < MOCK_USERS.length ? String(nextIndex) : null,
+  };
+}
+
+export function mockReports(
+  limit: number,
+  cursor?: string,
+  status?: ReportStatus,
+): AdminReportsPage {
+  const source = status
+    ? MOCK_REPORTS.filter((report) => report.status === status)
+    : MOCK_REPORTS;
+  const start = cursor === undefined ? 0 : Number(cursor);
+  if (!Number.isInteger(start) || start < 0 || start > source.length) {
+    return { items: [], nextCursor: null };
+  }
+
+  const items = source.slice(start, start + limit);
+  const nextIndex = start + limit;
+  return {
+    items,
+    nextCursor: nextIndex < source.length ? String(nextIndex) : null,
   };
 }

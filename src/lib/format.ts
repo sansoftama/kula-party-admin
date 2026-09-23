@@ -1,3 +1,7 @@
+import type { ReportStatus } from "@/lib/admin-types";
+
+const REPORT_STATUSES = new Set<ReportStatus>(["open", "resolved", "dismissed"]);
+
 export function formatTimestamp(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -29,4 +33,15 @@ export function parseCursor(
   const value = Array.isArray(raw) ? raw[0] : raw;
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+export function parseReportStatus(
+  raw: string | string[] | undefined,
+): ReportStatus | undefined {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const trimmed = value?.trim();
+  if (trimmed && REPORT_STATUSES.has(trimmed as ReportStatus)) {
+    return trimmed as ReportStatus;
+  }
+  return undefined;
 }

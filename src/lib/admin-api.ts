@@ -5,15 +5,20 @@ import { connection } from "next/server";
 import type {
   AdminApiResult,
   AdminHealth,
+  AdminReportsPage,
   AdminUsersPage,
   CheckStatus,
+  ReportStatus,
+  ReportTargetType,
   UserStatus,
 } from "@/lib/admin-types";
-import { mockHealth, mockUsers } from "@/lib/mock-admin";
+import { mockHealth, mockReports, mockUsers } from "@/lib/mock-admin";
 
 const DEFAULT_BASE_URL = "http://localhost:8080";
 const USER_STATUSES = new Set<UserStatus>(["active", "banned", "suspended"]);
 const CHECK_STATUSES = new Set<CheckStatus>(["up", "down"]);
+const REPORT_STATUSES = new Set<ReportStatus>(["open", "resolved", "dismissed"]);
+const REPORT_TARGET_TYPES = new Set<ReportTargetType>(["user", "room"]);
 
 class AdminApiError extends Error {
   status?: number;
@@ -238,6 +243,78 @@ function parseUsers(value: unknown): AdminUsersPage {
   };
 }
 
+function parseReports(value: unknown): AdminReportsPage {
+  const record = expectObject(value, "Reports response");
+  if (!Array.isArray(record.items)) {
+    throw new Error("items must be an array");
+  }
+
+  const items = record.items.map((item, index) => {
+    const report = expectObject(item, `items[${index}]`);
+    if (typeof report.id !== "string" || report.id.length === 0) {
+      throw new Error(`items[${index}].id must be a string`);
+    }
+    if (typeof report.reporterId !== "string" || report.reporterId.length === 0) {
+      throw new Error(`items[${index}].reporterId must be a string`);
+    }
+    if (
+      report.reporterUsername !== undefined &&
+      typeof report.reporterUsername !== "string"
+    ) {
+      throw new Error(`items[${index}].reporterUsername must be a string`);
+    }
+    if (
+      typeof report.targetType !== "string" ||
+      !REPORT_TARGET_TYPES.has(report.targetType as ReportTargetType)
+    ) {
+      throw new Error(`items[${index}].targetType must be user or room`);
+    }
+    if (typeof report.targetId !== "string" || report.targetId.length === 0) {
+      throw new Error(`items[${index}].targetId must be a string`);
+    }
+    if (report.targetLabel !== undefined && typeof report.targetLabel !== "string") {
+      throw new Error(`items[${index}].targetLabel must be a string`);
+    }
+    if (typeof report.reason !== "string" || report.reason.length === 0) {
+      throw new Error(`items[${index}].reason must be a string`);
+    }
+    if (
+      typeof report.status !== "string" ||
+      !REPORT_STATUSES.has(report.status as ReportStatus)
+    ) {
+      throw new Error(`items[${index}].status must be open, resolved, or dismissed`);
+    }
+    if (typeof report.createdAt !== "string" || report.createdAt.length === 0) {
+      throw new Error(`items[${index}].createdAt must be a string`);
+    }
+
+    return {
+      id: report.id,
+      reporterId: report.reporterId,
+      reporterUsername: report.reporterUsername,
+      targetType: report.targetType as ReportTargetType,
+      targetId: report.targetId,
+      targetLabel: report.targetLabel,
+      reason: report.reason,
+      status: report.status as ReportStatus,
+      createdAt: report.createdAt,
+    };
+  });
+
+  if (
+    record.nextCursor !== undefined &&
+    record.nextCursor !== null &&
+    typeof record.nextCursor !== "string"
+  ) {
+    throw new Error("nextCursor must be a string or null");
+  }
+
+  return {
+    items,
+    nextCursor: record.nextCursor ?? null,
+  };
+}
+
 export async function getAdminHealth(): Promise<AdminApiResult<AdminHealth>> {
   await connection();
   const mock = isMockAdminApi();
@@ -276,6 +353,38 @@ export async function getAdminUsers(input: {
       query.set("cursor", input.cursor);
     }
     const data = await requestJson(baseUrl, "/v1/admin/users", parseUsers, query);
+    return { ok: true, data, mock, baseUrl };
+  } catch (error) {
+    return failure(error, mock, baseUrl);
+  }
+}
+
+export async function getAdminReports(input: {
+  limit: number;
+  cursor?: string;
+  status?: ReportStatus;
+}): Promise<AdminApiResult<AdminReportsPage>> {
+  await connection();
+  const mock = isMockAdminApi();
+  let baseUrl = DEFAULT_BASE_URL;
+  try {
+    baseUrl = adminApiBaseUrl();
+    if (mock) {
+      return {
+        ok: true,
+        data: mockReports(input.limit, input.cursor, input.status),
+        mock,
+        baseUrl,
+      };
+    }
+    const query = new URLSearchParams({ limit: String(input.limit) });
+    if (input.cursor) {
+      query.set("cursor", input.cursor);
+    }
+    if (input.status) {
+      query.set("status", input.status);
+    }
+    const data = await requestJson(baseUrl, "/v1/admin/reports", parseReports, query);
     return { ok: true, data, mock, baseUrl };
   } catch (error) {
     return failure(error, mock, baseUrl);
