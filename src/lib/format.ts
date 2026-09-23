@@ -2,6 +2,7 @@ import type {
   LeaderboardBoard,
   PaymentStatus,
   ReportStatus,
+  RoomStatus,
 } from "@/lib/admin-types";
 
 const REPORT_STATUSES = new Set<ReportStatus>(["open", "resolved", "dismissed"]);
@@ -16,6 +17,7 @@ const LEADERBOARD_BOARDS = new Set<LeaderboardBoard>([
   "weekly",
   "all_time",
 ]);
+const ROOM_STATUSES = new Set<RoomStatus>(["live", "idle", "closed"]);
 
 // IDR amounts are whole rupiah. Other currencies are minor units (cents).
 const ZERO_DECIMAL_CURRENCIES = new Set(["IDR", "JPY", "KRW", "VND", "CLP"]);
@@ -82,6 +84,17 @@ export function parseLeaderboardBoard(
   const trimmed = value?.trim();
   if (trimmed && LEADERBOARD_BOARDS.has(trimmed as LeaderboardBoard)) {
     return trimmed as LeaderboardBoard;
+  }
+  return undefined;
+}
+
+export function parseRoomStatus(
+  raw: string | string[] | undefined,
+): RoomStatus | undefined {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const trimmed = value?.trim();
+  if (trimmed && ROOM_STATUSES.has(trimmed as RoomStatus)) {
+    return trimmed as RoomStatus;
   }
   return undefined;
 }

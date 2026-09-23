@@ -6,11 +6,14 @@ import type {
   AdminPaymentsPage,
   AdminReport,
   AdminReportsPage,
+  AdminRoom,
+  AdminRoomsPage,
   AdminUser,
   AdminUsersPage,
   LeaderboardBoard,
   PaymentStatus,
   ReportStatus,
+  RoomStatus,
 } from "@/lib/admin-types";
 
 const MOCK_USERS: AdminUser[] = [
@@ -725,6 +728,159 @@ export function mockLeaderboards(
   const source = board
     ? MOCK_LEADERBOARDS.filter((entry) => entry.board === board)
     : MOCK_LEADERBOARDS;
+  const start = cursor === undefined ? 0 : Number(cursor);
+  if (!Number.isInteger(start) || start < 0 || start > source.length) {
+    return { items: [], nextCursor: null };
+  }
+
+  const items = source.slice(start, start + limit);
+  const nextIndex = start + limit;
+  return {
+    items,
+    nextCursor: nextIndex < source.length ? String(nextIndex) : null,
+  };
+}
+
+const MOCK_ROOMS: AdminRoom[] = [
+  {
+    id: "room_karaoke_night",
+    name: "Karaoke Night",
+    hostId: "usr_01HZXK8A",
+    hostUsername: "amara",
+    status: "live",
+    participantCount: 42,
+    flags: ["featured", "recording"],
+    createdAt: "2026-09-23T18:05:00.000Z",
+  },
+  {
+    id: "room_afrobeats",
+    name: "Afrobeats Hour",
+    hostId: "usr_01J0BBP8",
+    hostUsername: "dj_kito",
+    status: "live",
+    participantCount: 28,
+    flags: ["featured"],
+    createdAt: "2026-09-23T17:40:00.000Z",
+  },
+  {
+    id: "room_vip_lounge",
+    name: "VIP Lounge",
+    hostId: "usr_01J3EES0",
+    hostUsername: "host.ada",
+    status: "live",
+    participantCount: 12,
+    flags: ["vip_only", "featured"],
+    createdAt: "2026-09-23T16:12:00.000Z",
+  },
+  {
+    id: "room_late_lobby",
+    name: "Late Lobby",
+    hostId: "usr_01HZY2M1",
+    hostUsername: "leo.waves",
+    status: "live",
+    participantCount: 7,
+    flags: ["nsfw_lock", "recording"],
+    createdAt: "2026-09-23T15:28:00.000Z",
+  },
+  {
+    id: "room_open_mic",
+    name: "Open Mic",
+    hostId: "usr_01J2DDR6",
+    hostUsername: "sami",
+    status: "live",
+    participantCount: 19,
+    flags: ["recording"],
+    createdAt: "2026-09-23T14:03:00.000Z",
+  },
+  {
+    id: "room_study_hall",
+    name: "Study Hall",
+    hostId: "usr_01J0AAN4",
+    hostUsername: "nabila",
+    status: "idle",
+    participantCount: 0,
+    flags: [],
+    createdAt: "2026-09-22T11:18:00.000Z",
+  },
+  {
+    id: "room_quiet_chill",
+    name: "Quiet Chill",
+    hostId: "usr_01J4FFT4",
+    hostUsername: "ghostline",
+    status: "idle",
+    participantCount: 2,
+    flags: ["vip_only"],
+    createdAt: "2026-09-21T22:44:00.000Z",
+  },
+  {
+    id: "room_welcome",
+    name: "Welcome Desk",
+    hostId: "usr_01J1CCQ2",
+    hostUsername: "mira.room",
+    status: "idle",
+    participantCount: 1,
+    flags: ["featured"],
+    createdAt: "2026-09-20T09:15:00.000Z",
+  },
+  {
+    id: "room_sunrise",
+    name: "Sunrise Set",
+    hostId: "usr_01J9NOHOST",
+    status: "idle",
+    participantCount: 0,
+    flags: ["nsfw_lock"],
+    createdAt: "2026-09-19T04:51:00.000Z",
+  },
+  {
+    id: "room_afterparty",
+    name: "Afterparty",
+    hostId: "usr_01J0BBP8",
+    hostUsername: "dj_kito",
+    status: "closed",
+    participantCount: 0,
+    flags: ["nsfw_lock"],
+    createdAt: "2026-09-18T23:10:00.000Z",
+  },
+  {
+    id: "room_city_pop",
+    name: "City Pop",
+    hostId: "usr_01HZXK8A",
+    hostUsername: "amara",
+    status: "closed",
+    participantCount: 0,
+    flags: ["featured", "vip_only", "recording"],
+    createdAt: "2026-09-16T20:33:00.000Z",
+  },
+  {
+    id: "room_archive",
+    name: "Archive",
+    hostId: "usr_01J3EES0",
+    hostUsername: "host.ada",
+    status: "closed",
+    participantCount: 0,
+    flags: [],
+    createdAt: "2026-09-12T13:06:00.000Z",
+  },
+  {
+    id: "room_staff_rehearsal",
+    name: "Staff Rehearsal",
+    hostId: "usr_01J2DDR6",
+    hostUsername: "sami",
+    status: "closed",
+    participantCount: 0,
+    flags: ["featured", "nsfw_lock", "recording", "vip_only"],
+    createdAt: "2026-09-08T18:22:00.000Z",
+  },
+];
+
+export function mockRooms(
+  limit: number,
+  cursor?: string,
+  status?: RoomStatus,
+): AdminRoomsPage {
+  const source = status
+    ? MOCK_ROOMS.filter((room) => room.status === status)
+    : MOCK_ROOMS;
   const start = cursor === undefined ? 0 : Number(cursor);
   if (!Number.isInteger(start) || start < 0 || start > source.length) {
     return { items: [], nextCursor: null };
