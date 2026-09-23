@@ -9,6 +9,7 @@ import type {
   AdminPaymentsPage,
   AdminReportsPage,
   AdminRoomsPage,
+  AdminSupportTicketsPage,
   AdminUsersPage,
   CheckStatus,
   LeaderboardBoard,
@@ -16,6 +17,8 @@ import type {
   ReportStatus,
   ReportTargetType,
   RoomStatus,
+  SupportTicketPriority,
+  SupportTicketStatus,
   UserStatus,
 } from "@/lib/admin-types";
 import {
@@ -24,6 +27,7 @@ import {
   mockPayments,
   mockReports,
   mockRooms,
+  mockSupportTickets,
   mockUsers,
 } from "@/lib/mock-admin";
 
@@ -44,6 +48,17 @@ const LEADERBOARD_BOARDS = new Set<LeaderboardBoard>([
   "all_time",
 ]);
 const ROOM_STATUSES = new Set<RoomStatus>(["live", "idle", "closed"]);
+const SUPPORT_TICKET_STATUSES = new Set<SupportTicketStatus>([
+  "open",
+  "pending",
+  "resolved",
+  "closed",
+]);
+const SUPPORT_TICKET_PRIORITIES = new Set<SupportTicketPriority>([
+  "low",
+  "normal",
+  "high",
+]);
 
 class AdminApiError extends Error {
   status?: number;
@@ -545,6 +560,81 @@ function parseRooms(value: unknown): AdminRoomsPage {
   };
 }
 
+function parseSupportTickets(value: unknown): AdminSupportTicketsPage {
+  const record = expectObject(value, "Support tickets response");
+  if (!Array.isArray(record.items)) {
+    throw new Error("items must be an array");
+  }
+
+  const items = record.items.map((item, index) => {
+    const ticket = expectObject(item, `items[${index}]`);
+    if (typeof ticket.id !== "string" || ticket.id.length === 0) {
+      throw new Error(`items[${index}].id must be a string`);
+    }
+    if (typeof ticket.userId !== "string" || ticket.userId.length === 0) {
+      throw new Error(`items[${index}].userId must be a string`);
+    }
+    if (ticket.username !== undefined && typeof ticket.username !== "string") {
+      throw new Error(`items[${index}].username must be a string`);
+    }
+    if (typeof ticket.subject !== "string" || ticket.subject.length === 0) {
+      throw new Error(`items[${index}].subject must be a string`);
+    }
+    if (ticket.bodyPreview !== undefined && typeof ticket.bodyPreview !== "string") {
+      throw new Error(`items[${index}].bodyPreview must be a string`);
+    }
+    if (
+      typeof ticket.status !== "string" ||
+      !SUPPORT_TICKET_STATUSES.has(ticket.status as SupportTicketStatus)
+    ) {
+      throw new Error(
+        `items[${index}].status must be open, pending, resolved, or closed`,
+      );
+    }
+    if (
+      typeof ticket.priority !== "string" ||
+      !SUPPORT_TICKET_PRIORITIES.has(ticket.priority as SupportTicketPriority)
+    ) {
+      throw new Error(`items[${index}].priority must be low, normal, or high`);
+    }
+    if (typeof ticket.createdAt !== "string" || ticket.createdAt.length === 0) {
+      throw new Error(`items[${index}].createdAt must be a string`);
+    }
+    if (
+      ticket.updatedAt !== undefined &&
+      ticket.updatedAt !== null &&
+      typeof ticket.updatedAt !== "string"
+    ) {
+      throw new Error(`items[${index}].updatedAt must be a string or null`);
+    }
+
+    return {
+      id: ticket.id,
+      userId: ticket.userId,
+      username: ticket.username,
+      subject: ticket.subject,
+      bodyPreview: ticket.bodyPreview,
+      status: ticket.status as SupportTicketStatus,
+      priority: ticket.priority as SupportTicketPriority,
+      createdAt: ticket.createdAt,
+      updatedAt: ticket.updatedAt,
+    };
+  });
+
+  if (
+    record.nextCursor !== undefined &&
+    record.nextCursor !== null &&
+    typeof record.nextCursor !== "string"
+  ) {
+    throw new Error("nextCursor must be a string or null");
+  }
+
+  return {
+    items,
+    nextCursor: record.nextCursor ?? null,
+  };
+}
+
 export async function getAdminHealth(): Promise<AdminApiResult<AdminHealth>> {
   await connection();
   const mock = isMockAdminApi();
@@ -716,6 +806,43 @@ export async function getAdminRooms(input: {
       query.set("status", input.status);
     }
     const data = await requestJson(baseUrl, "/v1/admin/rooms", parseRooms, query);
+    return { ok: true, data, mock, baseUrl };
+  } catch (error) {
+    return failure(error, mock, baseUrl);
+  }
+}
+
+export async function getAdminSupportTickets(input: {
+  limit: number;
+  cursor?: string;
+  status?: SupportTicketStatus;
+}): Promise<AdminApiResult<AdminSupportTicketsPage>> {
+  await connection();
+  const mock = isMockAdminApi();
+  let baseUrl = DEFAULT_BASE_URL;
+  try {
+    baseUrl = adminApiBaseUrl();
+    if (mock) {
+      return {
+        ok: true,
+        data: mockSupportTickets(input.limit, input.cursor, input.status),
+        mock,
+        baseUrl,
+      };
+    }
+    const query = new URLSearchParams({ limit: String(input.limit) });
+    if (input.cursor) {
+      query.set("cursor", input.cursor);
+    }
+    if (input.status) {
+      query.set("status", input.status);
+    }
+    const data = await requestJson(
+      baseUrl,
+      "/v1/admin/support/tickets",
+      parseSupportTickets,
+      query,
+    );
     return { ok: true, data, mock, baseUrl };
   } catch (error) {
     return failure(error, mock, baseUrl);

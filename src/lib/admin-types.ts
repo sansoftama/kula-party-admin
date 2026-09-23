@@ -8,6 +8,7 @@
  * GET /v1/admin/payments?limit=&cursor=&status=
  * GET /v1/admin/leaderboards?limit=&cursor=&board=
  * GET /v1/admin/rooms?limit=&cursor=&status=
+ * GET /v1/admin/support/tickets?limit=&cursor=&status=
  */
 
 export type CheckStatus = "up" | "down";
@@ -108,6 +109,27 @@ export type AdminRoom = {
 
 export type AdminRoomsPage = {
   items: AdminRoom[];
+  nextCursor?: string | null;
+};
+
+export type SupportTicketStatus = "open" | "pending" | "resolved" | "closed";
+
+export type SupportTicketPriority = "low" | "normal" | "high";
+
+export type AdminSupportTicket = {
+  id: string;
+  userId: string;
+  username?: string;
+  subject: string;
+  bodyPreview?: string;
+  status: SupportTicketStatus;
+  priority: SupportTicketPriority;
+  createdAt: string;
+  updatedAt?: string | null;
+};
+
+export type AdminSupportTicketsPage = {
+  items: AdminSupportTicket[];
   nextCursor?: string | null;
 };
 
