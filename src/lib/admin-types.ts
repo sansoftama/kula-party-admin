@@ -5,6 +5,7 @@
  * GET /v1/admin/health
  * GET /v1/admin/users?limit=&cursor=
  * GET /v1/admin/reports?limit=&cursor=&status=
+ * GET /v1/admin/payments?limit=&cursor=&status=
  */
 
 export type CheckStatus = "up" | "down";
@@ -50,6 +51,26 @@ export type AdminReport = {
 
 export type AdminReportsPage = {
   items: AdminReport[];
+  nextCursor?: string | null;
+};
+
+export type PaymentStatus = "pending" | "succeeded" | "failed" | "refunded";
+
+export type AdminPayment = {
+  id: string;
+  userId: string;
+  username?: string;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  provider?: string;
+  providerPaymentId?: string;
+  createdAt: string;
+  refundedAt?: string | null;
+};
+
+export type AdminPaymentsPage = {
+  items: AdminPayment[];
   nextCursor?: string | null;
 };
 

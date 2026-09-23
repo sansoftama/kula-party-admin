@@ -5,20 +5,28 @@ import { connection } from "next/server";
 import type {
   AdminApiResult,
   AdminHealth,
+  AdminPaymentsPage,
   AdminReportsPage,
   AdminUsersPage,
   CheckStatus,
+  PaymentStatus,
   ReportStatus,
   ReportTargetType,
   UserStatus,
 } from "@/lib/admin-types";
-import { mockHealth, mockReports, mockUsers } from "@/lib/mock-admin";
+import { mockHealth, mockPayments, mockReports, mockUsers } from "@/lib/mock-admin";
 
 const DEFAULT_BASE_URL = "http://localhost:8080";
 const USER_STATUSES = new Set<UserStatus>(["active", "banned", "suspended"]);
 const CHECK_STATUSES = new Set<CheckStatus>(["up", "down"]);
 const REPORT_STATUSES = new Set<ReportStatus>(["open", "resolved", "dismissed"]);
 const REPORT_TARGET_TYPES = new Set<ReportTargetType>(["user", "room"]);
+const PAYMENT_STATUSES = new Set<PaymentStatus>([
+  "pending",
+  "succeeded",
+  "failed",
+  "refunded",
+]);
 
 class AdminApiError extends Error {
   status?: number;
@@ -315,6 +323,85 @@ function parseReports(value: unknown): AdminReportsPage {
   };
 }
 
+function parsePayments(value: unknown): AdminPaymentsPage {
+  const record = expectObject(value, "Payments response");
+  if (!Array.isArray(record.items)) {
+    throw new Error("items must be an array");
+  }
+
+  const items = record.items.map((item, index) => {
+    const payment = expectObject(item, `items[${index}]`);
+    if (typeof payment.id !== "string" || payment.id.length === 0) {
+      throw new Error(`items[${index}].id must be a string`);
+    }
+    if (typeof payment.userId !== "string" || payment.userId.length === 0) {
+      throw new Error(`items[${index}].userId must be a string`);
+    }
+    if (payment.username !== undefined && typeof payment.username !== "string") {
+      throw new Error(`items[${index}].username must be a string`);
+    }
+    if (typeof payment.amount !== "number" || !Number.isFinite(payment.amount)) {
+      throw new Error(`items[${index}].amount must be a number`);
+    }
+    if (typeof payment.currency !== "string" || payment.currency.length === 0) {
+      throw new Error(`items[${index}].currency must be a string`);
+    }
+    if (
+      typeof payment.status !== "string" ||
+      !PAYMENT_STATUSES.has(payment.status as PaymentStatus)
+    ) {
+      throw new Error(
+        `items[${index}].status must be pending, succeeded, failed, or refunded`,
+      );
+    }
+    if (payment.provider !== undefined && typeof payment.provider !== "string") {
+      throw new Error(`items[${index}].provider must be a string`);
+    }
+    if (
+      payment.providerPaymentId !== undefined &&
+      typeof payment.providerPaymentId !== "string"
+    ) {
+      throw new Error(`items[${index}].providerPaymentId must be a string`);
+    }
+    if (typeof payment.createdAt !== "string" || payment.createdAt.length === 0) {
+      throw new Error(`items[${index}].createdAt must be a string`);
+    }
+    if (
+      payment.refundedAt !== undefined &&
+      payment.refundedAt !== null &&
+      typeof payment.refundedAt !== "string"
+    ) {
+      throw new Error(`items[${index}].refundedAt must be a string or null`);
+    }
+
+    return {
+      id: payment.id,
+      userId: payment.userId,
+      username: payment.username,
+      amount: payment.amount,
+      currency: payment.currency,
+      status: payment.status as PaymentStatus,
+      provider: payment.provider,
+      providerPaymentId: payment.providerPaymentId,
+      createdAt: payment.createdAt,
+      refundedAt: payment.refundedAt,
+    };
+  });
+
+  if (
+    record.nextCursor !== undefined &&
+    record.nextCursor !== null &&
+    typeof record.nextCursor !== "string"
+  ) {
+    throw new Error("nextCursor must be a string or null");
+  }
+
+  return {
+    items,
+    nextCursor: record.nextCursor ?? null,
+  };
+}
+
 export async function getAdminHealth(): Promise<AdminApiResult<AdminHealth>> {
   await connection();
   const mock = isMockAdminApi();
@@ -385,6 +472,38 @@ export async function getAdminReports(input: {
       query.set("status", input.status);
     }
     const data = await requestJson(baseUrl, "/v1/admin/reports", parseReports, query);
+    return { ok: true, data, mock, baseUrl };
+  } catch (error) {
+    return failure(error, mock, baseUrl);
+  }
+}
+
+export async function getAdminPayments(input: {
+  limit: number;
+  cursor?: string;
+  status?: PaymentStatus;
+}): Promise<AdminApiResult<AdminPaymentsPage>> {
+  await connection();
+  const mock = isMockAdminApi();
+  let baseUrl = DEFAULT_BASE_URL;
+  try {
+    baseUrl = adminApiBaseUrl();
+    if (mock) {
+      return {
+        ok: true,
+        data: mockPayments(input.limit, input.cursor, input.status),
+        mock,
+        baseUrl,
+      };
+    }
+    const query = new URLSearchParams({ limit: String(input.limit) });
+    if (input.cursor) {
+      query.set("cursor", input.cursor);
+    }
+    if (input.status) {
+      query.set("status", input.status);
+    }
+    const data = await requestJson(baseUrl, "/v1/admin/payments", parsePayments, query);
     return { ok: true, data, mock, baseUrl };
   } catch (error) {
     return failure(error, mock, baseUrl);

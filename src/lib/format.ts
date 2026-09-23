@@ -1,6 +1,15 @@
-import type { ReportStatus } from "@/lib/admin-types";
+import type { PaymentStatus, ReportStatus } from "@/lib/admin-types";
 
 const REPORT_STATUSES = new Set<ReportStatus>(["open", "resolved", "dismissed"]);
+const PAYMENT_STATUSES = new Set<PaymentStatus>([
+  "pending",
+  "succeeded",
+  "failed",
+  "refunded",
+]);
+
+// IDR amounts are whole rupiah. Other currencies are minor units (cents).
+const ZERO_DECIMAL_CURRENCIES = new Set(["IDR", "JPY", "KRW", "VND", "CLP"]);
 
 export function formatTimestamp(value: string): string {
   const date = new Date(value);
@@ -44,4 +53,44 @@ export function parseReportStatus(
     return trimmed as ReportStatus;
   }
   return undefined;
+}
+
+export function parsePaymentStatus(
+  raw: string | string[] | undefined,
+): PaymentStatus | undefined {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const trimmed = value?.trim();
+  if (trimmed && PAYMENT_STATUSES.has(trimmed as PaymentStatus)) {
+    return trimmed as PaymentStatus;
+  }
+  return undefined;
+}
+
+export function formatMoney(amount: number, currency: string): string {
+  const code = currency.trim().toUpperCase();
+  if (!Number.isFinite(amount) || !/^[A-Z]{3}$/.test(code)) {
+    return `${amount} ${currency}`.trim();
+  }
+
+  const zeroDecimal = ZERO_DECIMAL_CURRENCIES.has(code);
+  const major = zeroDecimal ? amount : amount / 100;
+
+  try {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: code,
+      currencyDisplay: "code",
+      minimumFractionDigits: zeroDecimal ? 0 : 2,
+      maximumFractionDigits: zeroDecimal ? 0 : 2,
+    }).format(major);
+  } catch {
+    return `${amount} ${code}`;
+  }
+}
+
+export function shortId(id: string): string {
+  if (id.length <= 16) {
+    return id;
+  }
+  return `${id.slice(0, 8)}…${id.slice(-4)}`;
 }
