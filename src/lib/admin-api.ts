@@ -8,12 +8,14 @@ import type {
   AdminLeaderboardsPage,
   AdminPaymentsPage,
   AdminReportsPage,
+  AdminRoomsPage,
   AdminUsersPage,
   CheckStatus,
   LeaderboardBoard,
   PaymentStatus,
   ReportStatus,
   ReportTargetType,
+  RoomStatus,
   UserStatus,
 } from "@/lib/admin-types";
 import {
@@ -21,6 +23,7 @@ import {
   mockLeaderboards,
   mockPayments,
   mockReports,
+  mockRooms,
   mockUsers,
 } from "@/lib/mock-admin";
 
@@ -40,6 +43,7 @@ const LEADERBOARD_BOARDS = new Set<LeaderboardBoard>([
   "weekly",
   "all_time",
 ]);
+const ROOM_STATUSES = new Set<RoomStatus>(["live", "idle", "closed"]);
 
 class AdminApiError extends Error {
   status?: number;
@@ -473,6 +477,74 @@ function parseLeaderboards(value: unknown): AdminLeaderboardsPage {
   };
 }
 
+function parseRooms(value: unknown): AdminRoomsPage {
+  const record = expectObject(value, "Rooms response");
+  if (!Array.isArray(record.items)) {
+    throw new Error("items must be an array");
+  }
+
+  const items = record.items.map((item, index) => {
+    const room = expectObject(item, `items[${index}]`);
+    if (typeof room.id !== "string" || room.id.length === 0) {
+      throw new Error(`items[${index}].id must be a string`);
+    }
+    if (typeof room.name !== "string" || room.name.length === 0) {
+      throw new Error(`items[${index}].name must be a string`);
+    }
+    if (typeof room.hostId !== "string" || room.hostId.length === 0) {
+      throw new Error(`items[${index}].hostId must be a string`);
+    }
+    if (room.hostUsername !== undefined && typeof room.hostUsername !== "string") {
+      throw new Error(`items[${index}].hostUsername must be a string`);
+    }
+    if (
+      typeof room.status !== "string" ||
+      !ROOM_STATUSES.has(room.status as RoomStatus)
+    ) {
+      throw new Error(`items[${index}].status must be live, idle, or closed`);
+    }
+    if (
+      typeof room.participantCount !== "number" ||
+      !Number.isFinite(room.participantCount)
+    ) {
+      throw new Error(`items[${index}].participantCount must be a number`);
+    }
+    if (
+      !Array.isArray(room.flags) ||
+      room.flags.some((flag) => typeof flag !== "string" || flag.length === 0)
+    ) {
+      throw new Error(`items[${index}].flags must be an array of strings`);
+    }
+    if (typeof room.createdAt !== "string" || room.createdAt.length === 0) {
+      throw new Error(`items[${index}].createdAt must be a string`);
+    }
+
+    return {
+      id: room.id,
+      name: room.name,
+      hostId: room.hostId,
+      hostUsername: room.hostUsername,
+      status: room.status as RoomStatus,
+      participantCount: room.participantCount,
+      flags: room.flags as string[],
+      createdAt: room.createdAt,
+    };
+  });
+
+  if (
+    record.nextCursor !== undefined &&
+    record.nextCursor !== null &&
+    typeof record.nextCursor !== "string"
+  ) {
+    throw new Error("nextCursor must be a string or null");
+  }
+
+  return {
+    items,
+    nextCursor: record.nextCursor ?? null,
+  };
+}
+
 export async function getAdminHealth(): Promise<AdminApiResult<AdminHealth>> {
   await connection();
   const mock = isMockAdminApi();
@@ -612,6 +684,38 @@ export async function getAdminLeaderboards(input: {
       parseLeaderboards,
       query,
     );
+    return { ok: true, data, mock, baseUrl };
+  } catch (error) {
+    return failure(error, mock, baseUrl);
+  }
+}
+
+export async function getAdminRooms(input: {
+  limit: number;
+  cursor?: string;
+  status?: RoomStatus;
+}): Promise<AdminApiResult<AdminRoomsPage>> {
+  await connection();
+  const mock = isMockAdminApi();
+  let baseUrl = DEFAULT_BASE_URL;
+  try {
+    baseUrl = adminApiBaseUrl();
+    if (mock) {
+      return {
+        ok: true,
+        data: mockRooms(input.limit, input.cursor, input.status),
+        mock,
+        baseUrl,
+      };
+    }
+    const query = new URLSearchParams({ limit: String(input.limit) });
+    if (input.cursor) {
+      query.set("cursor", input.cursor);
+    }
+    if (input.status) {
+      query.set("status", input.status);
+    }
+    const data = await requestJson(baseUrl, "/v1/admin/rooms", parseRooms, query);
     return { ok: true, data, mock, baseUrl };
   } catch (error) {
     return failure(error, mock, baseUrl);

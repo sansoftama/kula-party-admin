@@ -44,7 +44,12 @@ const NAV_ITEMS: NavItem[] = [
     isActive: (pathname) =>
       pathname === "/leaderboards" || pathname.startsWith("/leaderboards/"),
   },
-  { href: "/rooms", label: "Rooms / Flags", enabled: false },
+  {
+    href: "/rooms",
+    label: "Rooms / Flags",
+    enabled: true,
+    isActive: (pathname) => pathname === "/rooms" || pathname.startsWith("/rooms/"),
+  },
   { href: "/support", label: "Support", enabled: false },
 ];
 

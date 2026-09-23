@@ -7,6 +7,7 @@
  * GET /v1/admin/reports?limit=&cursor=&status=
  * GET /v1/admin/payments?limit=&cursor=&status=
  * GET /v1/admin/leaderboards?limit=&cursor=&board=
+ * GET /v1/admin/rooms?limit=&cursor=&status=
  */
 
 export type CheckStatus = "up" | "down";
@@ -89,6 +90,24 @@ export type AdminLeaderboardEntry = {
 
 export type AdminLeaderboardsPage = {
   items: AdminLeaderboardEntry[];
+  nextCursor?: string | null;
+};
+
+export type RoomStatus = "live" | "idle" | "closed";
+
+export type AdminRoom = {
+  id: string;
+  name: string;
+  hostId: string;
+  hostUsername?: string;
+  status: RoomStatus;
+  participantCount: number;
+  flags: string[];
+  createdAt: string;
+};
+
+export type AdminRoomsPage = {
+  items: AdminRoom[];
   nextCursor?: string | null;
 };
 
