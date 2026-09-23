@@ -8,7 +8,7 @@ Package manager: npm.
 
 ## Run
 
-Start the Ktor service from [kula-party-backend](https://github.com/sansoftama/kula-party-backend) on `http://localhost:8080` with `ADMIN_API_TOKEN=dev-admin-token`. This UI calls `GET /v1/admin/health`, `GET /v1/admin/users`, and `GET /v1/admin/reports` with `Authorization: Bearer dev-admin-token`. It also calls `GET /v1/admin/payments` when that stub exists.
+Start the Ktor service from [kula-party-backend](https://github.com/sansoftama/kula-party-backend) on `http://localhost:8080` with `ADMIN_API_TOKEN=dev-admin-token`. This UI calls `GET /v1/admin/health`, `GET /v1/admin/users`, `GET /v1/admin/reports`, `GET /v1/admin/payments`, and `GET /v1/admin/leaderboards` with `Authorization: Bearer dev-admin-token`.
 
 ```bash
 cp .env.example .env.local
@@ -47,14 +47,17 @@ There is no login screen in this version. The header shows a placeholder, “Sig
 | `/users` | `GET /v1/admin/users?limit=&cursor=` |
 | `/moderation` | `GET /v1/admin/reports?limit=&cursor=&status=` |
 | `/payments` | `GET /v1/admin/payments?limit=&cursor=&status=` |
+| `/leaderboards` | `GET /v1/admin/leaderboards?limit=&cursor=&board=` |
 
-The sidebar also lists Leaderboards, Rooms / Flags, and Support. Those items are inactive.
+The sidebar also lists Rooms / Flags and Support. Those items are inactive.
 
 Users is read-only. The search box filters the page already loaded. It does not send a search query, and there are no ban or suspend actions.
 
 Moderation calls `GET /v1/admin/reports`. It is read-only. Status chips send `status` as `open`, `resolved`, or `dismissed` (omit the param for all statuses). The default `limit` is 20. The search box filters the page already loaded by reporter, target, and reason. It does not send a search query, and there are no resolve, dismiss, or ban actions.
 
 Payments calls `GET /v1/admin/payments`. It is read-only. Status chips send `status` as `pending`, `succeeded`, `failed`, or `refunded` (omit the param for all statuses). The default `limit` is 20. The search box filters the page already loaded by id, username, user id, and provider payment id. It does not send a search query, and there are no refund, chargeback, or capture actions.
+
+Leaderboards calls `GET /v1/admin/leaderboards`. It is read-only. Board chips send `board` as `daily`, `weekly`, or `all_time` (omit the param for all boards). The default `limit` is 20. The search box filters the page already loaded by id, username, and user id. It does not send a search query, and there are no reset, edit, or wipe actions.
 
 ## Contracts
 
@@ -114,13 +117,27 @@ Implemented by kula-party-backend. The typed client is `src/lib/admin-api.ts`. S
   }>;
   nextCursor?: string | null;
 }
+
+// GET /v1/admin/leaderboards?limit=20&cursor=...&board=daily
+{
+  items: Array<{
+    id: string;
+    board: "daily" | "weekly" | "all_time";
+    rank: number;
+    userId: string;
+    username?: string;
+    score: number;
+    updatedAt: string; // ISO-8601
+  }>;
+  nextCursor?: string | null;
+}
 ```
 
-With `USE_MOCK_ADMIN_API=true`, responses match those shapes. Mock user, report, and payment cursors are numeric offsets (`0`, `8`, …) so `?limit=3` pages through the fixture list. Report and payment fixtures are filtered by `status` before that offset is applied.
+With `USE_MOCK_ADMIN_API=true`, responses match those shapes. Mock user, report, payment, and leaderboard cursors are numeric offsets (`0`, `8`, …) so `?limit=3` pages through the fixture list. Report and payment fixtures are filtered by `status` before that offset is applied. Leaderboard fixtures are filtered by `board` before that offset is applied.
 
 ## Out of scope
 
 - Consumer Android code
 - A second API (no Node/Express/Fastify server in this repo)
 - Retool or other hosted admin builders
-- Login, roles, bans, refund or capture actions, report actions, or room controls
+- Login, roles, bans, refund or capture actions, report actions, leaderboard score edits, or room controls

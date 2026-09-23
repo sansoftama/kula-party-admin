@@ -5,16 +5,24 @@ import { connection } from "next/server";
 import type {
   AdminApiResult,
   AdminHealth,
+  AdminLeaderboardsPage,
   AdminPaymentsPage,
   AdminReportsPage,
   AdminUsersPage,
   CheckStatus,
+  LeaderboardBoard,
   PaymentStatus,
   ReportStatus,
   ReportTargetType,
   UserStatus,
 } from "@/lib/admin-types";
-import { mockHealth, mockPayments, mockReports, mockUsers } from "@/lib/mock-admin";
+import {
+  mockHealth,
+  mockLeaderboards,
+  mockPayments,
+  mockReports,
+  mockUsers,
+} from "@/lib/mock-admin";
 
 const DEFAULT_BASE_URL = "http://localhost:8080";
 const USER_STATUSES = new Set<UserStatus>(["active", "banned", "suspended"]);
@@ -26,6 +34,11 @@ const PAYMENT_STATUSES = new Set<PaymentStatus>([
   "succeeded",
   "failed",
   "refunded",
+]);
+const LEADERBOARD_BOARDS = new Set<LeaderboardBoard>([
+  "daily",
+  "weekly",
+  "all_time",
 ]);
 
 class AdminApiError extends Error {
@@ -402,6 +415,64 @@ function parsePayments(value: unknown): AdminPaymentsPage {
   };
 }
 
+function parseLeaderboards(value: unknown): AdminLeaderboardsPage {
+  const record = expectObject(value, "Leaderboards response");
+  if (!Array.isArray(record.items)) {
+    throw new Error("items must be an array");
+  }
+
+  const items = record.items.map((item, index) => {
+    const entry = expectObject(item, `items[${index}]`);
+    if (typeof entry.id !== "string" || entry.id.length === 0) {
+      throw new Error(`items[${index}].id must be a string`);
+    }
+    if (
+      typeof entry.board !== "string" ||
+      !LEADERBOARD_BOARDS.has(entry.board as LeaderboardBoard)
+    ) {
+      throw new Error(`items[${index}].board must be daily, weekly, or all_time`);
+    }
+    if (typeof entry.rank !== "number" || !Number.isFinite(entry.rank)) {
+      throw new Error(`items[${index}].rank must be a number`);
+    }
+    if (typeof entry.userId !== "string" || entry.userId.length === 0) {
+      throw new Error(`items[${index}].userId must be a string`);
+    }
+    if (entry.username !== undefined && typeof entry.username !== "string") {
+      throw new Error(`items[${index}].username must be a string`);
+    }
+    if (typeof entry.score !== "number" || !Number.isFinite(entry.score)) {
+      throw new Error(`items[${index}].score must be a number`);
+    }
+    if (typeof entry.updatedAt !== "string" || entry.updatedAt.length === 0) {
+      throw new Error(`items[${index}].updatedAt must be a string`);
+    }
+
+    return {
+      id: entry.id,
+      board: entry.board as LeaderboardBoard,
+      rank: entry.rank,
+      userId: entry.userId,
+      username: entry.username,
+      score: entry.score,
+      updatedAt: entry.updatedAt,
+    };
+  });
+
+  if (
+    record.nextCursor !== undefined &&
+    record.nextCursor !== null &&
+    typeof record.nextCursor !== "string"
+  ) {
+    throw new Error("nextCursor must be a string or null");
+  }
+
+  return {
+    items,
+    nextCursor: record.nextCursor ?? null,
+  };
+}
+
 export async function getAdminHealth(): Promise<AdminApiResult<AdminHealth>> {
   await connection();
   const mock = isMockAdminApi();
@@ -504,6 +575,43 @@ export async function getAdminPayments(input: {
       query.set("status", input.status);
     }
     const data = await requestJson(baseUrl, "/v1/admin/payments", parsePayments, query);
+    return { ok: true, data, mock, baseUrl };
+  } catch (error) {
+    return failure(error, mock, baseUrl);
+  }
+}
+
+export async function getAdminLeaderboards(input: {
+  limit: number;
+  cursor?: string;
+  board?: LeaderboardBoard;
+}): Promise<AdminApiResult<AdminLeaderboardsPage>> {
+  await connection();
+  const mock = isMockAdminApi();
+  let baseUrl = DEFAULT_BASE_URL;
+  try {
+    baseUrl = adminApiBaseUrl();
+    if (mock) {
+      return {
+        ok: true,
+        data: mockLeaderboards(input.limit, input.cursor, input.board),
+        mock,
+        baseUrl,
+      };
+    }
+    const query = new URLSearchParams({ limit: String(input.limit) });
+    if (input.cursor) {
+      query.set("cursor", input.cursor);
+    }
+    if (input.board) {
+      query.set("board", input.board);
+    }
+    const data = await requestJson(
+      baseUrl,
+      "/v1/admin/leaderboards",
+      parseLeaderboards,
+      query,
+    );
     return { ok: true, data, mock, baseUrl };
   } catch (error) {
     return failure(error, mock, baseUrl);
