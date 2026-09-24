@@ -4,6 +4,8 @@ Ops admin web UI for [Kula Party](https://github.com/sansoftama/kula-party-admin
 
 It talks only to the existing Ktor service in [kula-party-backend](https://github.com/sansoftama/kula-party-backend) under `/v1/admin/...`. Admin routes, auth, and roles live on that backend. This repository does not run an API server.
 
+[Rekomendasi Arsitektur Backend: Ktor sekarang, Go jangka panjang](docs/arsitektur-ktor-go.md)
+
 Package manager: npm.
 
 ## Run
