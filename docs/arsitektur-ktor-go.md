@@ -4,6 +4,8 @@ Catatan keputusan untuk Kula Party (voice-party Android-first), disalin ke repo 
 
 Batas yang mengikat admin: panggilan tetap **HTTP/JSON**. Implementasi di balik kontrak boleh Ktor sekarang dan Go nanti. Jangan mengunci kode admin pada asumsi “satu host Ktor” di luar konfigurasi base URL.
 
+> **Klarifikasi.** Migrasi ke Go bersifat **opsional** dan semata-mata **mungkin** di masa depan — bukan keharusan, bukan target, dan bukan jadwal. Ktor tetap pilihan utama tanpa batas waktu, sampai bottleneck nyata muncul. Go siap disusulkan kapan saja bila diperlukan, tanpa komitmen.
+
 ## Ringkasan
 
 | Fase | Pilihan | Alasan |
@@ -102,6 +104,7 @@ Repo ini adalah **`kula-party-admin`**. Baris itu yang mengikat pemelihara UI. D
 - **Tidak:** Big-bang rewrite ke Go demi imitasi Hago.
 - **Ya:** Stabilkan auth/token/room/gifts sebagai boundary; migrasi bertahap.
 - **Tidak:** Memindahkan media keluar dari LiveKit ke backend custom “karena Go”.
+- **Opsional:** Go siap disusulkan kapan saja bila diperlukan, tanpa komitmen. Bukan keharusan, bukan target, dan bukan jadwal; Ktor tetap pilihan utama sampai bottleneck nyata muncul.
 
 ---
 
